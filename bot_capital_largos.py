@@ -23,7 +23,7 @@ import edge_tts
 import pytz
 
 # ================================================================
-# CONFIGURACIÓN (LARGOS)
+# CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
@@ -33,20 +33,20 @@ YOUTUBE_USER_TOKEN = (
     else {}
 )
 CANAL_LINK = "https://www.youtube.com/@CapitalDigitalInversiones"
-ESTADO_FILE = "estado_capital_largos.json"  # Control diario (1 al día)
+ESTADO_FILE = "estado_capital_largos.json"
 TITULOS_FILE = "titulos_capital_largos_publicados.json"
 TEMAS_PUBLICADOS_FILE = "temas_largos_publicados.json"
 META_DIARIA_LARGOS = 1
-DIAS_SIN_REPETIR_TEMA = 45  # Los largos se repiten menos seguido
+DIAS_SIN_REPETIR_TEMA = 45
 
 # ================================================================
-# VOZ FIJA (Jorge) - Velocidad normal para largos (+5% es más natural)
+# VOZ FIJA (Jorge) - +5% para largos
 # ================================================================
 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
-# PALETAS Y ESTILOS VISUALES (16:9 HORIZONTAL para largos)
+# PALETAS Y ESTILOS VISUALES (16:9)
 # ================================================================
 PALETAS_BASE = [
     "Corporate blue and silver, modern office",
@@ -64,7 +64,32 @@ COLORES_NEON = [
 COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
 
 # ================================================================
-# FUNCIONES DE ESTADO (Similares al bot de shorts, ajustadas para largos)
+# MÚSICA DE FONDO
+# ================================================================
+FONDOS_DISPONIBLES = [
+    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
+    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
+]
+
+def seleccionar_fondo_disponible(estado):
+    fondos = FONDOS_DISPONIBLES.copy()
+    ultimo_fondo = estado.get("ultimo_fondo")
+    if ultimo_fondo and ultimo_fondo in fondos:
+        fondos.remove(ultimo_fondo)
+    random.shuffle(fondos)
+    for root, dirs, files in os.walk("."):
+        if "/." in root or "\\." in root:
+            continue
+        for file in files:
+            for fondo in fondos:
+                if file.lower() == fondo.lower():
+                    full_path = os.path.join(root, file)
+                    estado["ultimo_fondo"] = fondo
+                    return full_path
+    return None
+
+# ================================================================
+# FUNCIONES DE ESTADO
 # ================================================================
 def cargar_estado():
     try:
@@ -165,40 +190,12 @@ def tema_ya_publicado(tema, dias=45):
     return False
 
 # ================================================================
-# MÚSICA DE FONDO
-# ================================================================
-FONDOS_DISPONIBLES = [
-    "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
-    "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
-]
-
-def seleccionar_fondo_disponible(estado):
-    fondos = FONDOS_DISPONIBLES.copy()
-    ultimo_fondo = estado.get("ultimo_fondo")
-    if ultimo_fondo and ultimo_fondo in fondos:
-        fondos.remove(ultimo_fondo)
-    random.shuffle(fondos)
-    for root, dirs, files in os.walk("."):
-        if "/." in root or "\\." in root:
-            continue
-        for file in files:
-            for fondo in fondos:
-                if file.lower() == fondo.lower():
-                    full_path = os.path.join(root, file)
-                    estado["ultimo_fondo"] = fondo
-                    return full_path
-    return None
-
-# ================================================================
-# FUNCIÓN PRINCIPAL DE GENERACIÓN DE GUION LARGO
+# GENERAR GUION LARGO
 # ================================================================
 def generar_guion_largo(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # ================================================================
-    # 📌 TEMAS PARA VIDEOS LARGOS (Basado en lo que funciona en tu canal)
-    # ================================================================
     TEMAS_EDUCATIVOS = [
         "Cómo Invertir en Criptomonedas con Seguridad (Guía Completa)",
         "Bitcoin y Oro: Refugios en Crisis Económica",
@@ -237,7 +234,6 @@ def generar_guion_largo(tipo):
         "Nuevas Altcoins con Potencial X10 (Análisis de Proyectos)"
     ]
 
-    # Selección de tema según el tipo, evitando repetidos
     temas_pool = []
     if tipo == "educativo": temas_pool = TEMAS_EDUCATIVOS
     elif tipo == "estafa": temas_pool = TEMAS_ESTAFAS_CRISIS
@@ -248,7 +244,6 @@ def generar_guion_largo(tipo):
     tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(temas_pool)
     print(f"📌 Tema seleccionado: {tema_elegido}")
 
-    # PROMPT DE DEEPSEEK PARA GENERAR EL GUION LARGO
     prompt = f"""
 Eres un CREADOR DE CONTENIDO FINANCIERO EXPERTO para YouTube. Debes escribir un guion para un video de 7-8 minutos.
 Tema: "{tema_elegido}"
@@ -274,6 +269,9 @@ Tipo: {tipo}
 - Descripción: Gancho, resumen, capítulos, CTA.
 - Keywords: 5 keywords principales.
 - Tags: 25-30 tags separados por coma.
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
+{titulos_referencia}
 
 RESPONDE EN JSON:
 {{
@@ -304,7 +302,6 @@ RESPONDE EN JSON:
         r.raise_for_status()
         data = r.json()
         content = data["choices"][0]["message"]["content"]
-        # Limpieza del JSON...
         inicio = content.find("{")
         fin = content.rfind("}")
         json_str = content[inicio:fin+1]
@@ -315,10 +312,9 @@ RESPONDE EN JSON:
         sys.exit(1)
 
 # ================================================================
-# FUNCIONES DE MONTAJE (Adaptadas para 16:9 HORIZONTAL)
+# GENERAR IMAGEN HORIZONTAL (16:9)
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
-    # Misma que vertical pero con width=1280, height=720
     prompt = re.sub(r"\n+", " ", prompt).strip()
     prompt = re.sub(r'"', "'", prompt)
     prompt = prompt[:950]
@@ -351,8 +347,10 @@ def generar_imagen_horizontal(prompt, intentos=3):
             time.sleep(10 * (intento + 1))
     return None
 
+# ================================================================
+# SUBTÍTULOS CON PIL (16:9)
+# ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
-    # Igual que antes pero con medidas 1280x720
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
@@ -361,14 +359,12 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         except:
             font = ImageFont.load_default()
         
-        # Limitar texto para subtítulos
         palabras = texto.split()
         if len(palabras) > 20:
             texto_sub = ' '.join(palabras[:20])
         else:
             texto_sub = texto
         
-        # Posición centrada abajo (ancho 1280, alto 720)
         bbox = draw.textbbox((0, 0), texto_sub, font=font)
         ancho = bbox[2] - bbox[0]
         x = (1280 - ancho) // 2
@@ -383,81 +379,8 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         print(f"⚠️ Error subtítulos: {e}")
         return imagen_path
 
-def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
-    if not recursos:
-        raise ValueError("No hay recursos")
-    
-    clips_video = []
-    clips_audio = []
-    
-    for i, rec in enumerate(recursos):
-        img_url = rec["imagen_url"]
-        audio_path = rec["audio_path"]
-        duracion = rec["duracion"]
-        texto = rec.get("texto", "")
-        
-        # Descargar y procesar imagen (1280x720)
-        try:
-            if img_url.startswith("http"):
-                r = requests.get(img_url, timeout=30)
-                r.raise_for_status()
-                img_path = f"temp_largo_{i}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(r.content)
-            else:
-                img_path = img_url
-            
-            img_sub_path = f"temp_largo_sub_{i}.jpg"
-            img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
-            
-            img = Image.open(img_path)
-            img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
-            img.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion)
-        except Exception as e:
-            print(f"⚠️ Falló imagen {i}: {e}")
-            video_clip = ImageClip("placeholder.jpg").set_duration(duracion)
-        
-        clips_video.append(video_clip)
-        
-        try:
-            audio = AudioFileClip(audio_path)
-            clips_audio.append(audio)
-        except:
-            silencio = AudioClip(lambda t: 0, duration=duracion)
-            clips_audio.append(silencio)
-    
-    # Concatenar (pausas más cortas para largos)
-    PAUSA = 0.2
-    audio_final_parts = []
-    for i, aud in enumerate(clips_audio):
-        audio_final_parts.append(aud)
-        if i < len(clips_audio) - 1:
-            audio_final_parts.append(AudioClip(lambda t: 0, duration=PAUSA))
-    
-    audio_narracion = concatenate_audioclips(audio_final_parts)
-    duracion_total = audio_narracion.duration
-    
-    video = concatenate_videoclips(clips_video, method="compose")
-    video = video.set_duration(duracion_total)
-    
-    # Fondo musical
-    if fondo_path and os.path.exists(fondo_path):
-        fondo_clip = AudioFileClip(fondo_path)
-        if fondo_clip.duration < duracion_total:
-            veces = int(duracion_total / fondo_clip.duration) + 1
-            fondo_clip = concatenate_audioclips([fondo_clip] * veces)
-        fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.05)
-        audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-    else:
-        audio_final = audio_narracion
-    
-    video = video.set_audio(audio_final)
-    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
-    return salida
-
 # ================================================================
-# FUNCIÓN DE GENERACIÓN DE AUDIO (VOZ +10% PARA LARGOS)
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index):
     global CONFIG_VOZ_ACTUAL
@@ -481,6 +404,85 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
+# MONTAR VIDEO
+# ================================================================
+def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
+    if not recursos:
+        raise ValueError("No hay recursos")
+    
+    clips_video = []
+    clips_audio = []
+    
+    for i, rec in enumerate(recursos):
+        img_url = rec["imagen_url"]
+        audio_path = rec["audio_path"]
+        duracion = rec["duracion"]
+        texto = rec.get("texto", "")
+        
+        try:
+            if img_url.startswith("http"):
+                r = requests.get(img_url, timeout=30)
+                r.raise_for_status()
+                img_path = f"temp_largo_{i}.jpg"
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+            else:
+                img_path = img_url
+            
+            img_sub_path = f"temp_largo_sub_{i}.jpg"
+            img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
+            
+            img = Image.open(img_path)
+            img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
+            img.save(img_path)
+            video_clip = ImageClip(img_path).set_duration(duracion)
+        except Exception as e:
+            print(f"⚠️ Falló imagen {i}: {e}")
+            img_path = "placeholder.jpg"
+            img = Image.new("RGB", (1280, 720), (20, 20, 50))
+            img.save(img_path)
+            video_clip = ImageClip(img_path).set_duration(duracion)
+        
+        clips_video.append(video_clip)
+        
+        try:
+            audio = AudioFileClip(audio_path)
+            clips_audio.append(audio)
+        except:
+            silencio = AudioClip(lambda t: 0, duration=duracion)
+            clips_audio.append(silencio)
+    
+    PAUSA = 0.2
+    audio_final_parts = []
+    for i, aud in enumerate(clips_audio):
+        audio_final_parts.append(aud)
+        if i < len(clips_audio) - 1:
+            audio_final_parts.append(AudioClip(lambda t: 0, duration=PAUSA))
+    
+    audio_narracion = concatenate_audioclips(audio_final_parts)
+    duracion_total = audio_narracion.duration
+    
+    video = concatenate_videoclips(clips_video, method="compose")
+    video = video.set_duration(duracion_total)
+    
+    if fondo_path and os.path.exists(fondo_path):
+        try:
+            fondo_clip = AudioFileClip(fondo_path)
+            if fondo_clip.duration < duracion_total:
+                veces = int(duracion_total / fondo_clip.duration) + 1
+                fondo_clip = concatenate_audioclips([fondo_clip] * veces)
+            fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.05)
+            audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
+        except:
+            audio_final = audio_narracion
+    else:
+        audio_final = audio_narracion
+    
+    video = video.set_audio(audio_final)
+    video.write_videofile(salida, fps=24, codec="libx264", audio_codec="aac", threads=4, preset="ultrafast")
+    return salida
+
+# ================================================================
 # SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, descripcion):
@@ -499,7 +501,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion):
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": etiquetas[:30],
-            "categoryId": "27",  # Educación
+            "categoryId": "27",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -537,7 +539,6 @@ def main():
         print("✅ Ya se publicó el video largo hoy. Saliendo.")
         sys.exit(0)
     
-    # Rotación de tipos: Lunes-Educativo, Martes-Estafa, Miércoles-Psicología, Jueves-Análisis, etc.
     tipos = ["educativo", "estafa", "psicologia", "analisis"]
     tipo = random.choice(tipos)
     print(f"📌 Tipo: {tipo.upper()}")
@@ -551,7 +552,6 @@ def main():
     tags = guion["tags"]
     segmentos = guion["segmentos"]
     
-    # Generar recursos
     recursos = []
     for idx, seg in enumerate(segmentos):
         print(f"🎬 Segmento {idx+1}/{len(segmentos)}")
@@ -575,20 +575,17 @@ def main():
             "duracion": dur,
             "texto": seg["texto"]
         })
-        time.sleep(10)  # Evitar rate limit
+        time.sleep(10)
     
     if not recursos:
         print("❌ No se generaron recursos.")
         sys.exit(1)
     
-    # Montar video
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4")
     print(f"🎬 Video montado: {video_path}")
     
-    # Subir
     video_id = subir_a_youtube(video_path, titulo, tags, descripcion)
     
-    # Guardar estado
     guardar_titulo_publicado(titulo)
     guardar_tema_publicado(tema, tipo)
     incrementar_publicaciones_hoy()
