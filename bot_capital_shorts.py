@@ -16,8 +16,6 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
     AudioClip,
-    TextClip,
-    CompositeVideoClip,
 )
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import requests
@@ -177,7 +175,7 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
-# 📁 TEMAS PUBLICADOS (evitar repeticiones)
+# 📁 TEMAS PUBLICADOS
 # ================================================================
 def cargar_temas_publicados():
     try:
@@ -195,7 +193,6 @@ def guardar_tema_publicado(tema, tipo):
         "fecha": datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
     }
     temas.append(tema_data)
-    # Mantener solo los últimos 200
     if len(temas) > 200:
         temas = temas[-200:]
     with open(TEMAS_PUBLICADOS_FILE, "w", encoding="utf-8") as f:
@@ -213,11 +210,11 @@ def tema_ya_publicado(tema, dias=30):
     return False
 
 # ================================================================
-# 🔥 EXPANSIÓN AUTOMÁTICA DE TEXTO CORTO
+# 🔥 EXPANSIÓN CONTROLADA (máximo 160 palabras)
 # ================================================================
 def expandir_texto_corto(texto_corto, tema):
     prompt = f"""El siguiente relato financiero es demasiado corto ({len(texto_corto.split())} palabras). 
-EXPÁNDELO a 130-150 palabras añadiendo más contexto, detalles, ejemplos o consecuencias. 
+EXPÁNDELO a EXACTAMENTE 140-150 palabras añadiendo más contexto, detalles, ejemplos o consecuencias. 
 Mantén el mismo tono y estructura (GANCHO, DATOS, EXPLICACION, SOLUCION, CIERRE).
 
 TEMA: {tema}
@@ -240,13 +237,49 @@ Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXP
         r.raise_for_status()
         expanded = r.json()["choices"][0]["message"]["content"].strip()
         if len(expanded.split()) > 100:
-            print(f"✅ Texto expandido: {len(expanded.split())} palabras")
             return expanded
         else:
             return texto_corto
     except Exception as e:
         print(f"⚠️ Error en expansión: {e}")
         return texto_corto
+
+def ajustar_longitud_texto(texto, min_palabras=120, max_palabras=160):
+    palabras = len(re.findall(r'\w+', texto))
+    if palabras < min_palabras:
+        print(f"   ⚠️ Texto corto ({palabras} palabras). Expandiendo...")
+        texto = expandir_texto_corto(texto, "contenido financiero")
+        palabras = len(re.findall(r'\w+', texto))
+        print(f"   📊 Palabras después de expansión: {palabras}")
+    if palabras > max_palabras:
+        print(f"   ⚠️ Texto largo ({palabras} palabras). Truncando a {max_palabras}...")
+        # Truncar manteniendo los bloques
+        partes = re.split(r'(\[GANCHO\]|\[DATOS\]|\[EXPLICACION\]|\[SOLUCION\]|\[CIERRE\])', texto)
+        resultado = []
+        total_palabras = 0
+        for i in range(0, len(partes), 2):
+            if i+1 < len(partes):
+                etiqueta = partes[i]
+                contenido = partes[i+1]
+                palabras_contenido = len(re.findall(r'\w+', contenido))
+                if total_palabras + palabras_contenido > max_palabras:
+                    sobrante = max_palabras - total_palabras
+                    if sobrante > 0:
+                        palabras_list = contenido.split()
+                        contenido = ' '.join(palabras_list[:sobrante])
+                        resultado.append(etiqueta + contenido)
+                    break
+                else:
+                    resultado.append(etiqueta + contenido)
+                    total_palabras += palabras_contenido
+        if resultado:
+            texto = ''.join(resultado)
+        else:
+            # Fallback: truncar por palabras
+            palabras_list = texto.split()
+            texto = ' '.join(palabras_list[:max_palabras])
+        print(f"   📊 Palabras después de truncar: {len(re.findall(r'\w+', texto))}")
+    return texto
 
 # ================================================================
 # 🔥 TREND-JACKING: OBTENER NOTICIA DE NEWSAPI
@@ -282,9 +315,6 @@ def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # ================================================================
-    # 📌 NICHOS GENERALES (el bot elige aleatoriamente, DeepSeek desarrolla)
-    # ================================================================
     NICHOS_EDUCATIVOS = [
         "Inversiones en criptomonedas",
         "Estrategias para ahorrar e invertir",
@@ -311,36 +341,28 @@ def generar_guion_financiero(tipo):
         "Manipulación del mercado"
     ]
 
-    # ================================================================
-    # 🎯 SELECCIÓN DEL TEMA SEGÚN TIPO
-    # ================================================================
     tema_elegido = None
     
     if tipo == "noticia":
-        # Noticias: siempre de la API
         noticia_trending = obtener_noticia_trending()
         if noticia_trending and not tema_ya_publicado(noticia_trending, DIAS_SIN_REPETIR_TEMA):
             tema_elegido = noticia_trending[:100]
             print(f"📰 Noticia en tiempo real: {tema_elegido}")
         else:
-            # Si la noticia ya fue usada o no hay, usamos un nicho educativo como respaldo
             print("⚠️ Noticia ya usada o no disponible. Usando nicho educativo...")
             tipo = "educativo"
             temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
             tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_EDUCATIVOS)
     
     elif tipo == "educativo":
-        # Educativo: elegir de nichos educativos no usados recientemente
         temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         if temas_disponibles:
             tema_elegido = random.choice(temas_disponibles)
         else:
-            # Si todos están usados, forzar uno (pero se guardará igual)
             tema_elegido = random.choice(NICHOS_EDUCATIVOS)
             print(f"⚠️ Todos los nichos educativos usados en los últimos {DIAS_SIN_REPETIR_TEMA} días. Forzando: {tema_elegido}")
     
     else:  # estafa
-        # Estafa: elegir de nichos de estafas no usados recientemente
         temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         if temas_disponibles:
             tema_elegido = random.choice(temas_disponibles)
@@ -351,9 +373,6 @@ def generar_guion_financiero(tipo):
     print(f"📌 Tema seleccionado: {tema_elegido}")
     print(f"📌 Tipo: {tipo.upper()}")
 
-    # ================================================================
-    # PROMPT PARA DEEPSEEK (GENERAL, DESARROLLA EL NICHO)
-    # ================================================================
     prompt = f"""Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 
 📌 NICHO O TEMA BASE: "{tema_elegido}"
@@ -365,13 +384,12 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
 🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
 1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras.
 2. Divide el texto en 5 BLOQUES OBLIGATORIOS:
-   - [GANCHO] (3-5 palabras, impacto máximo, detiene el scroll)
-   - [DATOS] (1-2 oraciones con el dato impactante o contexto)
+   - [GANCHO] (3-5 palabras, impacto máximo)
+   - [DATOS] (1-2 oraciones con el dato impactante)
    - [EXPLICACION] (3-4 oraciones desarrollando el tema)
-   - [SOLUCION] (2-3 oraciones con la moraleja o conclusión)
+   - [SOLUCION] (2-3 oraciones con la moraleja)
    - [CIERRE] (1 oración con pregunta o CTA)
-3. Asegúrate de que cada bloque tenga suficiente contenido. No te limites a frases cortas.
-4. Usa un tono coloquial, directo y cercano. Como si estuvieras contando una historia a un amigo.
+3. Usa un tono coloquial, directo y cercano.
 
 📐 EJEMPLO DE ESTRUCTURA (NO copies el contenido, solo la extensión):
 [GANCHO] ¡El Bitcoin se desplomó!
@@ -382,8 +400,8 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
 
 🎯 REGLAS SEO:
 1. TÍTULO: 50-70 caracteres, con keyword al inicio.
-2. PALABRAS CLAVE: 2-3 términos de alto volumen (ej. Bitcoin, Inflación, Oro).
-3. TAGS: 15-20 tags (mezcla de principales, long-tail y geográficos).
+2. PALABRAS CLAVE: 2-3 términos de alto volumen.
+3. TAGS: 15-20 tags.
 4. PALABRAS PORTADA: 2-3 palabras (ej. "RÉCORD", "COLAPSO").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
@@ -437,20 +455,13 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
             if not all(marker in texto for marker in ["[GANCHO]", "[DATOS]", "[EXPLICACION]", "[SOLUCION]", "[CIERRE]"]):
                 raise ValueError("Faltan bloques obligatorios")
 
-            # Contar palabras
+            # 🔥 AJUSTAR LONGITUD (expandir o truncar)
+            texto = ajustar_longitud_texto(texto, min_palabras=120, max_palabras=160)
+            data["texto_completo"] = texto
             palabras = len(re.findall(r'\w+', texto))
-            print(f"   📊 Palabras generadas: {palabras}")
-            
-            # Si es muy corto (<110), expandir automáticamente
-            if palabras < 110:
-                print(f"   ⚠️ Texto demasiado corto ({palabras} palabras). Expandiendo...")
-                texto = expandir_texto_corto(texto, tema_elegido)
-                data["texto_completo"] = texto
-                palabras = len(re.findall(r'\w+', texto))
-                print(f"   📊 Palabras después de expansión: {palabras}")
-            
-            # Validar rango final (110-160)
-            if palabras < 100 or palabras > 170:
+            print(f"   📊 Palabras finales: {palabras}")
+
+            if palabras < 110 or palabras > 170:
                 raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 110-160)")
 
             # Procesar título y keywords
@@ -503,7 +514,7 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
-                time.sleep(8 + intento * 3)
+                time.sleep(10 + intento * 5)  # Pausa más larga
 
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
@@ -661,9 +672,12 @@ Return ONLY the English prompt, no explanations.
         return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN CON AGNES
+# 🖼️ GENERAR IMAGEN CON AGNES (con pausas)
 # ================================================================
-def generar_imagen_vertical(prompt, intentos=3):
+def generar_imagen_vertical(prompt, intentos=3, pausa_inicial=0):
+    if pausa_inicial > 0:
+        time.sleep(pausa_inicial)
+    
     prompt = re.sub(r"\n+", " ", prompt).strip()
     prompt = re.sub(r'"', "'", prompt)
     prompt = prompt[:950]
@@ -709,7 +723,9 @@ def generar_imagen_vertical(prompt, intentos=3):
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(8 * (intento + 1))
+            pausa = 10 * (intento + 1)  # 10s, 20s, 30s
+            print(f"   ⏳ Esperando {pausa}s antes de reintentar...")
+            time.sleep(pausa)
     return None
 
 # ================================================================
@@ -739,7 +755,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 return filename
         except Exception as e:
             print(f"   ❌ Falló voz {voz}: {e}")
-        time.sleep(3)
+        time.sleep(5)
         if os.path.exists(filename):
             try: os.remove(filename)
             except: pass
@@ -747,7 +763,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO
+# 🎬 GENERAR RECURSOS POR SEGMENTO (con pausas ampliadas)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
@@ -765,13 +781,18 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         )
         print(f"    📝 Prompt: {prompt_img[:100]}...")
         
+        # Pausa antes de generar imagen (15s para evitar rate limit)
+        if idx > 0:
+            print(f"   ⏳ Esperando 15s antes de generar imagen {idx+1}...")
+            time.sleep(15)
+        
         img_url = None
         for intento in range(intentos_imagen):
-            img_url = generar_imagen_vertical(prompt_img, intentos=1)
+            img_url = generar_imagen_vertical(prompt_img, intentos=1, pausa_inicial=0)
             if img_url:
                 print(f"    ✅ Imagen generada (intento {intento+1})")
                 break
-            time.sleep(6)
+            time.sleep(10)
         
         if not img_url:
             print(f"    ⚠️ Imagen falló, usando placeholder")
@@ -794,20 +815,91 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             "texto": seg
         })
         
+        # Pausa entre segmentos
         if idx < total - 1:
-            time.sleep(12)
+            print(f"   ⏳ Esperando 15s antes del siguiente segmento...")
+            time.sleep(15)
     
     return recursos
 
 # ================================================================
-# 🎬 MONTAR VIDEO CON SUBTÍTULOS QUEMADOS
+# 🎬 MONTAR VIDEO CON SUBTÍTULOS (USANDO PIL - NO ImageMagick)
 # ================================================================
+def crear_imagen_con_subtitulo(imagen_path, texto, duracion, salida_path=None):
+    """
+    Toma una imagen, le añade subtítulo con PIL y devuelve un ImageClip.
+    """
+    try:
+        # Cargar imagen
+        img = Image.open(imagen_path)
+        img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
+        
+        # Preparar para dibujar
+        draw = ImageDraw.Draw(img)
+        
+        # Fuente
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
+        except:
+            try:
+                font = ImageFont.truetype("arial.ttf", 60)
+            except:
+                font = ImageFont.load_default()
+        
+        # Limpiar texto (máximo 2 líneas)
+        palabras = texto.split()
+        if len(palabras) > 14:
+            texto_sub = ' '.join(palabras[:14])
+        else:
+            texto_sub = texto
+        
+        # Calcular tamaño del texto
+        bbox = draw.textbbox((0, 0), texto_sub, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Posición: centrado horizontal, vertical a 85% de la altura
+        x = (1080 - text_width) // 2
+        y = int(1920 * 0.85) - text_height // 2
+        
+        # Fondo semitransparente para legibilidad
+        padding = 15
+        rect_x1 = x - padding
+        rect_y1 = y - padding
+        rect_x2 = x + text_width + padding
+        rect_y2 = y + text_height + padding
+        
+        # Crear overlay oscuro
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle([rect_x1, rect_y1, rect_x2, rect_y2], fill=(0, 0, 0, 180))
+        img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        
+        # Dibujar texto
+        draw = ImageDraw.Draw(img)
+        # Sombra
+        draw.text((x+3, y+3), texto_sub, fill='black', font=font)
+        # Texto principal
+        draw.text((x, y), texto_sub, fill='white', font=font)
+        
+        # Guardar temporal
+        if not salida_path:
+            salida_path = f"temp_sub_{random.randint(1000,9999)}.jpg"
+        img.save(salida_path)
+        
+        # Crear clip
+        return ImageClip(salida_path).set_duration(duracion), salida_path
+    except Exception as e:
+        print(f"⚠️ Error creando imagen con subtítulo: {e}")
+        return ImageClip(imagen_path).set_duration(duracion), imagen_path
+
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
         raise ValueError("No hay recursos")
     
     clips_video = []
     clips_audio = []
+    temp_files = []
     
     for i, rec in enumerate(recursos):
         img_url = rec["imagen_url"]
@@ -815,6 +907,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
         duracion = rec["duracion"]
         texto = rec.get("texto", "")
         
+        # Descargar imagen
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -822,45 +915,23 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
                 img_path = f"temp_cap_{i}.jpg"
                 with open(img_path, "wb") as f:
                     f.write(r.content)
+                temp_files.append(img_path)
             else:
                 img_path = img_url
-            
-            img = Image.open(img_path)
-            img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
-            img.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion)
         except Exception as e:
-            print(f"⚠️ Falló imagen {i}: {e}")
+            print(f"⚠️ Falló descarga imagen {i}: {e}")
             img_path = f"placeholder_{i}.jpg"
             img = Image.new("RGB", (1080, 1920), (20, 20, 50))
             img.save(img_path)
-            video_clip = ImageClip(img_path).set_duration(duracion)
+            temp_files.append(img_path)
         
-        # Subtítulos
-        try:
-            palabras = texto.split()
-            if len(palabras) > 12:
-                texto_sub = ' '.join(palabras[:12])
-            else:
-                texto_sub = texto
-            
-            txt_clip = TextClip(
-                texto_sub,
-                fontsize=50,
-                color='white',
-                stroke_color='black',
-                stroke_width=3,
-                font='Arial',
-                method='caption',
-                size=(900, None)
-            ).set_position(('center', 1650)).set_duration(duracion)
-            
-            video_clip = CompositeVideoClip([video_clip, txt_clip])
-        except Exception as e:
-            print(f"⚠️ Error en subtítulo {i}: {e}")
-        
+        # Crear imagen con subtítulo (PIL, no ImageMagick)
+        video_clip, img_sub_path = crear_imagen_con_subtitulo(img_path, texto, duracion)
+        if img_sub_path not in temp_files:
+            temp_files.append(img_sub_path)
         clips_video.append(video_clip)
         
+        # Audio
         try:
             audio = AudioFileClip(audio_path)
             clips_audio.append(audio)
@@ -868,6 +939,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             silencio = AudioClip(lambda t: 0, duration=duracion)
             clips_audio.append(silencio)
     
+    # Concatenar audio con pausas
     PAUSA = 0.3
     audio_final_parts = []
     for i, aud in enumerate(clips_audio):
@@ -901,11 +973,18 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     video.close()
     audio_final.close()
     
+    # Limpiar temporales
+    for f in temp_files:
+        try: os.remove(f)
+        except: pass
     for f in os.listdir("."):
         if f.startswith("temp_cap_") and f.endswith(".jpg"):
             try: os.remove(f)
             except: pass
         if f.startswith("placeholder_") and f.endswith(".jpg"):
+            try: os.remove(f)
+            except: pass
+        if f.startswith("temp_sub_") and f.endswith(".jpg"):
             try: os.remove(f)
             except: pass
     
@@ -960,7 +1039,7 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.j
         return None
 
 # ================================================================
-# 🚀 SUBIR A YOUTUBE (con disclaimer de inversión)
+# 🚀 SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
@@ -973,7 +1052,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
-    # 🔥 DESCRIPCIÓN: SIN disclaimer de IA (YouTube ya lo pone)
     descripcion = f"""{gancho}
 
 {contexto}
@@ -991,14 +1069,14 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": etiquetas[:30],
-            "categoryId": "27",
+            "categoryId": "27",  # EDUCACIÓN
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,  # 🔴 YouTube muestra "Contenido generado con IA"
+            "containsSyntheticMedia": True,
         },
     }
     
@@ -1026,12 +1104,12 @@ def main():
     print("🎬 Capital Digital - Bot de SHORTS (Versión DEFINITIVA)")
     print("   ✓ Voz fija (Jorge)")
     print("   ✓ Miniatura personalizada")
-    print("   ✓ Subtítulos quemados")
+    print("   ✓ Subtítulos con PIL (sin ImageMagick)")
     print("   ✓ Trend-Jacking con NewsAPI")
     print("   ✓ Hashtags estratégicos")
     print("   ✓ Estructura viral 130-150 palabras")
-    print("   ✓ Expansión automática de texto corto")
     print("   ✓ Control de temas usados (30 días)")
+    print("   ✓ Pausas ampliadas (15s entre imágenes)")
     print("   ✓ Disclaimer financiero en descripción")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1047,7 +1125,6 @@ def main():
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
-    # Elegir tipo según la hora
     hora = datetime.now(pytz.timezone("America/Mexico_City")).hour
     if 7 <= hora < 11:
         tipo = "noticia"
@@ -1061,7 +1138,6 @@ def main():
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
     
-    # Generar guion (devuelve guion y tema elegido)
     guion, tema_elegido = generar_guion_financiero(tipo)
     texto = guion["texto_completo"]
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
@@ -1101,7 +1177,6 @@ def main():
         miniatura_path=miniatura_path
     )
     
-    # Guardar todo
     guardar_titulo_publicado(guion["titulo"])
     guardar_tema_publicado(tema_elegido, tipo)
     incrementar_publicaciones_hoy()
