@@ -42,9 +42,9 @@ ACTIVAR_DISCLOSURE_IA = True
 DIAS_SIN_REPETIR_TEMA = 30
 
 # ================================================================
-# VOZ FIJA (Jorge)
+# VOZ FIJA (Jorge) - VELOCIDAD +10% (NATURAL Y CORTA)
 # ================================================================
-VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
+VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
@@ -210,12 +210,12 @@ def tema_ya_publicado(tema, dias=30):
     return False
 
 # ================================================================
-# 🔥 EXPANSIÓN Y TRUNCAMIENTO DE TEXTO
+# 🔥 EXPANSIÓN Y TRUNCAMIENTO DE TEXTO (PARA 90-110 PALABRAS)
 # ================================================================
 def expandir_texto_corto(texto_corto, tema):
     palabras_cortas = len(re.findall(r'\w+', texto_corto))
     prompt = f"""El siguiente relato financiero es demasiado corto ({palabras_cortas} palabras). 
-EXPÁNDELO a EXACTAMENTE 140-150 palabras añadiendo más contexto, detalles, ejemplos o consecuencias. 
+EXPÁNDELO a EXACTAMENTE 90-110 palabras añadiendo más contexto, detalles, ejemplos o consecuencias. 
 Mantén el mismo tono y estructura (GANCHO, DATOS, EXPLICACION, SOLUCION, CIERRE).
 
 TEMA: {tema}
@@ -231,7 +231,7 @@ Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXP
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 800,
+        "max_tokens": 600,
     }
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -239,7 +239,7 @@ Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXP
         expanded = r.json()["choices"][0]["message"]["content"].strip()
         palabras_exp = len(re.findall(r'\w+', expanded))
         print(f"✅ Texto expandido: {palabras_exp} palabras")
-        if palabras_exp > 160:
+        if palabras_exp > 130:
             expanded = truncar_texto(expanded)
             palabras_exp = len(re.findall(r'\w+', expanded))
             print(f"✂️ Texto truncado a: {palabras_exp} palabras")
@@ -250,9 +250,9 @@ Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXP
 
 def truncar_texto(texto):
     palabras = texto.split()
-    if len(palabras) <= 150:
+    if len(palabras) <= 110:
         return texto
-    truncado = ' '.join(palabras[:150])
+    truncado = ' '.join(palabras[:110])
     if not truncado.endswith(('.', '!', '?')):
         truncado += '.'
     return truncado
@@ -285,7 +285,7 @@ def obtener_noticia_trending():
         return None
 
 # ================================================================
-# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL
+# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (90-110 PALABRAS)
 # ================================================================
 def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -368,15 +368,15 @@ def generar_guion_financiero(tipo):
 🎯 INSTRUCCIONES:
 Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque específico dentro del nicho, como un caso real, una lección práctica, un dato impactante o una historia ejemplar.
 
-🎯 REGLAS DE CONTENIDO VIRAL:
-1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras.
+🎯 REGLAS DE CONTENIDO VIRAL (PARA SHORTS DE 30-40 SEGUNDOS):
+1. Escribe OBLIGATORIAMENTE entre 90 y 110 palabras.
 2. Divide el texto en 5 BLOQUES OBLIGATORIOS:
-   - [GANCHO] (3-5 palabras, impacto máximo)
+   - [GANCHO] (3-4 palabras, impacto máximo)
    - [DATOS] (1-2 oraciones con el dato impactante)
-   - [EXPLICACION] (3-4 oraciones desarrollando el tema)
-   - [SOLUCION] (2-3 oraciones con la moraleja)
+   - [EXPLICACION] (2-3 oraciones desarrollando el tema)
+   - [SOLUCION] (1-2 oraciones con la moraleja)
    - [CIERRE] (1 oración con pregunta o CTA)
-3. Usa un tono coloquial, directo y cercano.
+3. Usa un tono coloquial, directo y cercano. Frases cortas y contundentes.
 
 🎯 REGLAS SEO:
 1. TÍTULO: 50-70 caracteres, con keyword al inicio.
@@ -396,7 +396,7 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
     "gancho_descripcion": "Gancho para descripción (máx 90 chars)",
     "contexto_descripcion": "Contexto en una oración",
     "fuente_relato": "Fuente del relato",
-    "texto_completo": "Texto con los 5 bloques (130-150 palabras)",
+    "texto_completo": "Texto con los 5 bloques (90-110 palabras)",
     "palabras_portada": "2-3 palabras para miniatura",
     "tags": "15-20 tags separados por coma"
 }}
@@ -408,7 +408,7 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 1400,
+        "max_tokens": 1000,
         "response_format": {"type": "json_object"}
     }
 
@@ -438,21 +438,21 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
             palabras = len(re.findall(r'\w+', texto))
             print(f"   📊 Palabras generadas: {palabras}")
             
-            if palabras < 110:
+            if palabras < 70:
                 print(f"   ⚠️ Texto demasiado corto ({palabras} palabras). Expandiendo...")
                 texto = expandir_texto_corto(texto, tema_elegido)
                 data["texto_completo"] = texto
                 palabras = len(re.findall(r'\w+', texto))
                 print(f"   📊 Palabras después de expansión: {palabras}")
-            elif palabras > 160:
+            elif palabras > 130:
                 print(f"   ✂️ Texto demasiado largo ({palabras} palabras). Truncando...")
                 texto = truncar_texto(texto)
                 data["texto_completo"] = texto
                 palabras = len(re.findall(r'\w+', texto))
                 print(f"   📊 Palabras después de truncar: {palabras}")
             
-            if palabras < 100 or palabras > 170:
-                raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 110-160)")
+            if palabras < 70 or palabras > 130:
+                raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 70-120)")
 
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
@@ -509,7 +509,7 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
 # ================================================================
 # 📝 DIVIDIR EN 5 SEGMENTOS
 # ================================================================
-def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
+def dividir_en_segmentos(texto, max_palabras_por_segmento=35):
     patron = r'\[GANCHO\](.*?)(?=\[DATOS\]|$)|\[DATOS\](.*?)(?=\[EXPLICACION\]|$)|\[EXPLICACION\](.*?)(?=\[SOLUCION\]|$)|\[SOLUCION\](.*?)(?=\[CIERRE\]|$)|\[CIERRE\](.*?)$'
     matches = re.findall(patron, texto, re.DOTALL)
     
@@ -711,7 +711,7 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 📝 GENERAR AUDIO CON JORGE
+# 📝 GENERAR AUDIO CON JORGE (+10%)
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -719,8 +719,8 @@ def generar_audio(texto, index, intentos_por_voz=2):
     texto_limpio = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
     texto_limpio = re.sub(r'\s+', ' ', texto_limpio).strip()
     
-    if len(texto_limpio) < 30:
-        texto_limpio = "Noticias financieras de hoy en Capital Digital."
+    if len(texto_limpio) < 20:
+        texto_limpio = "Noticias financieras."
     
     filename = f"audio_capital_{index}.mp3"
     voz = CONFIG_VOZ_ACTUAL["voz"]
@@ -922,7 +922,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             silencio = AudioClip(lambda t: 0, duration=duracion)
             clips_audio.append(silencio)
     
-    PAUSA = 0.5
+    PAUSA = 0.3
     audio_final_parts = []
     for i, aud in enumerate(clips_audio):
         audio_final_parts.append(aud)
@@ -1024,7 +1024,8 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
 def main():
     print("="*60)
     print("🎬 Capital Digital - Bot de SHORTS (Versión FINAL)")
-    print("   ✓ Voz fija (Jorge)")
+    print("   ✓ Voz fija (Jorge) - velocidad +10%")
+    print("   ✓ 90-110 palabras por video")
     print("   ✓ Sin miniatura personalizada")
     print("   ✓ Reutilización de imágenes")
     print("   ✓ 30+ temas por categoría")
@@ -1064,7 +1065,7 @@ def main():
     print(f"📝 Texto: {palabras_texto} palabras")
     print(f"📌 Tema: {tema_elegido}")
     
-    segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
+    segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=35)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
     print(f"🎬 {len(segmentos)} segmentos generados")
     
