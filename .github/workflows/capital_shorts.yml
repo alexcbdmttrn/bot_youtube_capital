@@ -1,0 +1,58 @@
+name: Bot YouTube - Shorts Capital Digital (3 al día)
+
+on:
+  schedule:
+    - cron: '14 14 * * *'   # 8:14 AM CDMX
+    - cron: '22 20 * * *'   # 2:22 PM CDMX
+    - cron: '44 2 * * *'    # 8:44 PM CDMX
+    - cron: '30 5 * * *'    # 11:30 PM CDMX (respaldo)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install "Pillow<10.0.0"
+          pip install moviepy==1.0.3
+          pip install requests google-auth google-api-python-client google-auth-oauthlib
+          pip install edge-tts
+          pip install json5
+          pip install pytz
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Ejecutar bot de Shorts (Capital Digital)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          YOUTUBE_USER_TOKEN_CAPITAL: ${{ secrets.YOUTUBE_USER_TOKEN_CAPITAL }}
+        run: python bot_capital_shorts.py
+
+      - name: Commit y push del estado
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add estado_capital_shorts.json titulos_capital_shorts_publicados.json
+          if git diff-index --quiet HEAD; then
+            echo "✅ No hay cambios en los estados"
+          else
+            git commit -m "Actualizar estado Capital Digital shorts [skip ci]"
+            git pull origin main --rebase
+            git push
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
