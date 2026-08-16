@@ -239,26 +239,20 @@ Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXP
         expanded = r.json()["choices"][0]["message"]["content"].strip()
         palabras_exp = len(re.findall(r'\w+', expanded))
         print(f"✅ Texto expandido: {palabras_exp} palabras")
-        
-        # Si sigue siendo muy largo, truncar
         if palabras_exp > 160:
             expanded = truncar_texto(expanded)
             palabras_exp = len(re.findall(r'\w+', expanded))
             print(f"✂️ Texto truncado a: {palabras_exp} palabras")
-        
         return expanded
     except Exception as e:
         print(f"⚠️ Error en expansión: {e}")
         return texto_corto
 
 def truncar_texto(texto):
-    """Trunca texto a ~150 palabras manteniendo los bloques"""
     palabras = texto.split()
     if len(palabras) <= 150:
         return texto
-    # Truncar a 150 palabras
     truncado = ' '.join(palabras[:150])
-    # Asegurar que cierre con un punto
     if not truncado.endswith(('.', '!', '?')):
         truncado += '.'
     return truncado
@@ -297,30 +291,44 @@ def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
+    # ======================================================================
+    # 📌 NICHOS AMPLIADOS (30+ por categoría)
+    # ======================================================================
     NICHOS_EDUCATIVOS = [
-        "Inversiones en criptomonedas",
-        "Estrategias para ahorrar e invertir",
-        "Conceptos básicos del mercado financiero",
-        "Cómo funciona la bolsa de valores",
-        "Educación sobre seguros y protección financiera",
-        "Análisis de activos: oro, acciones, bonos",
-        "Finanzas personales y presupuestos",
-        "Tecnología financiera (fintech)",
-        "Planificación para el retiro",
-        "Impuestos y declaraciones fiscales"
+        "Inversiones en criptomonedas", "Estrategias para ahorrar e invertir",
+        "Conceptos básicos del mercado financiero", "Cómo funciona la bolsa de valores",
+        "Educación sobre seguros y protección financiera", "Análisis de activos: oro, acciones, bonos",
+        "Finanzas personales y presupuestos", "Tecnología financiera (fintech)",
+        "Planificación para el retiro", "Impuestos y declaraciones fiscales",
+        "Qué es el trading y cómo empezar", "Forex: el mercado de divisas",
+        "Cómo funcionan los ETFs", "Acciones vs. bonos: diferencias clave",
+        "Qué es la diversificación de cartera", "Cómo leer un estado financiero",
+        "Finanzas conductuales", "Qué es un fideicomiso",
+        "Cómo funciona el crowdfunding", "Inversiones sostenibles y ESG",
+        "Qué es el interés compuesto", "Cómo invertir en bienes raíces",
+        "El papel de los bancos centrales", "Inflación y poder adquisitivo",
+        "Qué son las criptomonedas estables", "Cómo funciona un exchange",
+        "Qué es un swap en finanzas", "Cómo protegerte de la inflación",
+        "Estrategias de inversión a largo plazo", "Análisis técnico vs. fundamental"
     ]
     
     NICHOS_ESTAFAS = [
-        "Fraudes famosos en el mundo financiero",
-        "Estafas con criptomonedas",
-        "Crisis bancarias y sus lecciones",
-        "Escándalos corporativos",
-        "Estafas de inversión",
-        "Casos de corrupción financiera",
-        "Colapsos bursátiles",
-        "Estafas piramidales",
-        "Fraudes con seguros",
-        "Manipulación del mercado"
+        "Fraudes famosos en el mundo financiero", "Estafas con criptomonedas",
+        "Crisis bancarias y sus lecciones", "Escándalos corporativos",
+        "Estafas de inversión", "Casos de corrupción financiera",
+        "Colapsos bursátiles", "Estafas piramidales",
+        "Fraudes con seguros", "Manipulación del mercado",
+        "Estafa de las opciones binarias", "Fraude de las criptomonedas falsas",
+        "El colapso de los mercados emergentes", "Estafas de refinanciación",
+        "Fraudes con préstamos", "Esquemas Ponzi en la historia",
+        "Manipulación de la libra esterlina", "Estafas de las puntocom",
+        "Fraude de las hipotecas subprime", "Caso de la estafa de la minera de Bitcoin",
+        "El escándalo de las divisas", "Estafa de las acciones de centavo",
+        "Fraude de los seguros de vida", "Estafa de los fondos de inversión",
+        "Caso de la estafa de las criptomonedas en México",
+        "Fraudes con tarjetas de crédito", "Estafas de los bienes raíces",
+        "El caso de la estafa de la energética", "Fraudes con las remesas",
+        "Estafas de las inversiones en arte"
     ]
 
     tema_elegido = None
@@ -344,7 +352,7 @@ def generar_guion_financiero(tipo):
             tema_elegido = random.choice(NICHOS_EDUCATIVOS)
             print(f"⚠️ Todos los nichos educativos usados en los últimos {DIAS_SIN_REPETIR_TEMA} días. Forzando: {tema_elegido}")
     
-    else:
+    else:  # estafa
         temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         if temas_disponibles:
             tema_elegido = random.choice(temas_disponibles)
@@ -363,7 +371,7 @@ def generar_guion_financiero(tipo):
 🎯 INSTRUCCIONES:
 Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque específico dentro del nicho, como un caso real, una lección práctica, un dato impactante o una historia ejemplar.
 
-🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
+🎯 REGLAS DE CONTENIDO VIRAL:
 1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras.
 2. Divide el texto en 5 BLOQUES OBLIGATORIOS:
    - [GANCHO] (3-5 palabras, impacto máximo)
@@ -654,7 +662,7 @@ Return ONLY the English prompt, no explanations.
         return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN CON AGNES
+# 🖼️ GENERAR IMAGEN CON AGNES (CON REUTILIZACIÓN)
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt = re.sub(r"\n+", " ", prompt).strip()
@@ -740,11 +748,12 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO
+# 🎬 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN DE IMÁGENES)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
     total = len(segmentos)
+    last_successful_url = None  # 🔥 Para reutilizar si falla
     
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Segmento {idx+1}/{total} ({len(seg.split())} palabras)")
@@ -763,12 +772,31 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             img_url = generar_imagen_vertical(prompt_img, intentos=1)
             if img_url:
                 print(f"    ✅ Imagen generada (intento {intento+1})")
+                last_successful_url = img_url  # Guardar la última exitosa
                 break
             time.sleep(8)
         
+        # 🔥 Si falló, usar la última imagen exitosa (o la siguiente si es la primera)
         if not img_url:
-            print(f"    ⚠️ Imagen falló, usando placeholder")
+            if last_successful_url:
+                print(f"    🔄 Reutilizando imagen anterior (falló la generación)")
+                img_url = last_successful_url
+            else:
+                # Si es el primer segmento y falla, esperar y reintentar
+                print(f"    ⚠️ No hay imagen previa. Reintentando una vez más...")
+                time.sleep(15)
+                img_url = generar_imagen_vertical(prompt_img, intentos=1)
+                if img_url:
+                    last_successful_url = img_url
+                else:
+                    print(f"    ❌ Falló definitivamente, usando placeholder temporal")
+                    img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
+                    last_successful_url = img_url
+        
+        # Asegurar que siempre haya una URL
+        if not img_url:
             img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
+            last_successful_url = img_url
         
         audio_path = generar_audio(seg, idx)
         if not audio_path:
@@ -797,12 +825,10 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
 # 🎬 MONTAR VIDEO CON SUBTÍTULOS (PIL)
 # ================================================================
 def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
-    """Agrega subtítulos a una imagen usando PIL (sin ImageMagick)"""
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
         
-        # Fuente más pequeña para subtítulos
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 45)
         except:
@@ -811,17 +837,14 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
             except:
                 font = ImageFont.load_default()
         
-        # Limitar texto a 2 líneas
         palabras = texto.split()
         if len(palabras) > 14:
             texto_sub = ' '.join(palabras[:14])
         else:
             texto_sub = texto
         
-        # Dividir en 2 líneas si es largo
         if len(texto_sub) > 60:
             mitad = len(texto_sub) // 2
-            # Buscar un espacio cerca de la mitad
             espacio = texto_sub.find(' ', mitad - 10)
             if espacio == -1:
                 espacio = mitad
@@ -831,7 +854,6 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         else:
             lineas = [texto_sub]
         
-        # Posición del subtítulo (abajo)
         y_base = 1650
         for i, linea in enumerate(lineas):
             bbox = draw.textbbox((0, 0), linea, font=font)
@@ -839,7 +861,6 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
             x = (1080 - ancho) // 2
             y = y_base + i * 50
             
-            # Sombra negra para legibilidad
             sombra_offset = 3
             draw.text((x + sombra_offset, y + sombra_offset), linea, fill='black', font=font)
             draw.text((x, y), linea, fill='white', font=font)
@@ -848,7 +869,7 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         return salida_path
     except Exception as e:
         print(f"⚠️ Error en subtítulos PIL: {e}")
-        return imagen_path  # Devuelve la original sin modificar
+        return imagen_path
 
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
@@ -873,7 +894,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             else:
                 img_path = img_url
             
-            # Agregar subtítulos con PIL
             img_sub_path = f"temp_cap_sub_{i}.jpg"
             img_path = agregar_subtitulos_con_pil(img_path, texto, img_sub_path)
             
@@ -897,7 +917,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             silencio = AudioClip(lambda t: 0, duration=duracion)
             clips_audio.append(silencio)
     
-    PAUSA = 0.5  # Pausa entre segmentos
+    PAUSA = 0.5
     audio_final_parts = []
     for i, aud in enumerate(clips_audio):
         audio_final_parts.append(aud)
@@ -941,57 +961,9 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     return salida
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA PERSONALIZADA
+# 🚀 SUBIR A YOUTUBE (SIN MINIATURA PERSONALIZADA)
 # ================================================================
-def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.jpg"):
-    try:
-        if imagen_url.startswith("http"):
-            r = requests.get(imagen_url, timeout=30)
-            r.raise_for_status()
-            img_path = "temp_thumb.jpg"
-            with open(img_path, "wb") as f:
-                f.write(r.content)
-        else:
-            img_path = imagen_url
-        
-        img = Image.open(img_path)
-        img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
-        draw = ImageDraw.Draw(img)
-        
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
-        except:
-            try:
-                font = ImageFont.truetype("arial.ttf", 120)
-            except:
-                font = ImageFont.load_default()
-        
-        texto = texto_portada.upper().strip()
-        palabras = texto.split()
-        if len(palabras) > 3:
-            texto = ' '.join(palabras[:3])
-        
-        bbox = draw.textbbox((0, 0), texto, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        x = (1280 - text_width) // 2
-        y = 720 - text_height - 60
-        
-        sombra_offset = 4
-        draw.text((x + sombra_offset, y + sombra_offset), texto, fill='black', font=font)
-        draw.text((x, y), texto, fill='white', font=font)
-        
-        img.save(salida)
-        print(f"✅ Miniatura personalizada creada: {salida}")
-        return salida
-    except Exception as e:
-        print(f"⚠️ Error creando miniatura: {e}")
-        return None
-
-# ================================================================
-# 🚀 SUBIR A YOUTUBE (con categoría EDUCACIÓN)
-# ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
+def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente=""):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -1019,7 +991,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": etiquetas[:30],
-            "categoryId": "27",  # 🔥 EDUCACIÓN
+            "categoryId": "27",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -1036,32 +1008,23 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
     
-    if miniatura_path and os.path.exists(miniatura_path):
-        try:
-            media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
-            youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-            print("✅ Miniatura personalizada subida exitosamente")
-        except Exception as e:
-            print(f"⚠️ Error subiendo miniatura: {e}")
+    # 🔥 YA NO SUBIMOS MINIATURA PERSONALIZADA
+    print("🖼️ YouTube seleccionará automáticamente la miniatura del video.")
     
     return video_id
 
 # ================================================================
-# 🎯 MAIN
+# 🎯 MAIN (CON ROTACIÓN FORZADA: 1 NOTICIA, 1 EDUCATIVO, 1 ESTAFA)
 # ================================================================
 def main():
     print("="*60)
     print("🎬 Capital Digital - Bot de SHORTS (Versión DEFINITIVA)")
     print("   ✓ Voz fija (Jorge)")
-    print("   ✓ Miniatura personalizada")
-    print("   ✓ Subtítulos con PIL (sin ImageMagick)")
-    print("   ✓ Trend-Jacking con NewsAPI")
-    print("   ✓ Hashtags estratégicos")
-    print("   ✓ Estructura viral 130-150 palabras")
-    print("   ✓ Expansión y truncamiento automático")
-    print("   ✓ Control de temas usados (30 días)")
-    print("   ✓ Disclaimer financiero")
-    print("   ✓ Categoría: EDUCACIÓN (27)")
+    print("   ✓ SIN miniatura personalizada (YouTube elige)")
+    print("   ✓ Reutilización de imágenes si falla")
+    print("   ✓ 30+ temas por categoría")
+    print("   ✓ Rotación forzada: Noticia → Educativo → Estafa")
+    print("   ✓ Subtítulos con PIL")
     print("   ✓ Pausas de 15s entre segmentos")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1077,15 +1040,15 @@ def main():
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
-    hora = datetime.now(pytz.timezone("America/Mexico_City")).hour
-    if 7 <= hora < 11:
+    # 🔥 ROTACIÓN FORZADA según el número de publicaciones hoy
+    if publicadas == 0:
         tipo = "noticia"
-    elif 11 <= hora < 16:
+    elif publicadas == 1:
         tipo = "educativo"
-    else:
+    else:  # publicadas == 2
         tipo = "estafa"
     
-    print(f"📌 Tipo: {tipo.upper()}")
+    print(f"📌 Tipo: {tipo.upper()} (Short #{publicadas+1} del día)")
     
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
@@ -1110,13 +1073,8 @@ def main():
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video generado: {video_path}")
     
-    miniatura_path = None
-    if recursos and recursos[0].get("imagen_url"):
-        miniatura_path = crear_miniatura_personalizada(
-            recursos[0]["imagen_url"],
-            palabras_portada,
-            "miniatura.jpg"
-        )
+    # 🔥 YA NO CREAMOS MINIATURA
+    print("🖼️ Usando miniatura automática de YouTube.")
     
     video_id = subir_a_youtube(
         video_path=video_path,
@@ -1125,8 +1083,7 @@ def main():
         gancho=guion["gancho_descripcion"],
         contexto=guion["contexto_descripcion"],
         hashtags=guion["hashtags_descripcion"],
-        fuente=guion.get("fuente_relato", "Basado en análisis financiero"),
-        miniatura_path=miniatura_path
+        fuente=guion.get("fuente_relato", "Basado en análisis financiero")
     )
     
     guardar_titulo_publicado(guion["titulo"])
