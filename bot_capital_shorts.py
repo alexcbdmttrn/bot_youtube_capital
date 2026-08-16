@@ -16,8 +16,10 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
     AudioClip,
+    TextClip,
+    CompositeVideoClip,
 )
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw, ImageFont
 import requests
 import edge_tts
 import pytz
@@ -32,26 +34,22 @@ YOUTUBE_USER_TOKEN = (
     if os.getenv("YOUTUBE_USER_TOKEN_CAPITAL")
     else {}
 )
-FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA ESTO
-CANAL_LINK = "https://www.youtube.com/@CapitalDigital"      # ⚠️ CAMBIA ESTO
+NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"  # Tu API key de NewsAPI
+FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA
+CANAL_LINK = "https://www.youtube.com/@CapitalDigital"       # ⚠️ CAMBIA
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 ACTIVAR_DISCLOSURE_IA = True
 
 # ================================================================
-# VOCES PREMIUM
+# VOZ FIJA (Jorge) - IDENTIDAD SONORA
 # ================================================================
-VOCES_DISPONIBLES = [
-    {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"},
-    {"voz": "es-ES-AlvaroNeural", "velocidad": "+8%", "tono": "-2Hz", "nombre": "Álvaro (ES)"},
-    {"voz": "es-MX-ManuelNeural", "velocidad": "+8%", "tono": "0Hz", "nombre": "Manuel (MX)"},
-    {"voz": "es-CL-LorenzoNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Lorenzo (CL)"},
-]
-CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
+VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
+CONFIG_VOZ_ACTUAL = VOZ_FIJA  # Siempre usará Jorge
 
 # ================================================================
-# PALETAS Y ESTILOS VISUALES (con acentos neón según etapa)
+# PALETAS Y ESTILOS VISUALES
 # ================================================================
 PALETAS_BASE = [
     "Corporate blue and silver, modern office",
@@ -64,7 +62,6 @@ PALETAS_BASE = [
 ]
 PALETA_BASE_ACTUAL = random.choice(PALETAS_BASE)
 
-# Colores neón para acentos
 COLORES_NEON = [
     "electric cyan neon glow",
     "neon magenta pulse",
@@ -75,6 +72,13 @@ COLORES_NEON = [
     "neon blue-white flash"
 ]
 COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
+
+# ================================================================
+# HASHTAGS ESTRATÉGICOS (Alto, Medio, Bajo volumen)
+# ================================================================
+HASHTAGS_ALTO_VOLUMEN = ["#Finanzas", "#Inversiones", "#Bitcoin", "#Economia", "#Oro", "#Bancos"]
+HASHTAGS_MEDIO_VOLUMEN = ["#CriptoHoy", "#OroInversion", "#EducacionFinanciera", "#MercadoFinanciero", "#Ahorros"]
+HASHTAGS_BAJO_VOLUMEN = ["#ETFMexico", "#SegurosDeVida", "#ExchangeSeguro", "#CrisisFinanciera", "#FinanzasPersonalesMX"]
 
 # ================================================================
 # MÚSICA DE FONDO (opcional)
@@ -172,13 +176,43 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
-# 🎯 GENERAR GUION CON SEO PREMIUM (títulos de 50-70 caracteres)
+# 🔥 TREND-JACKING: OBTENER NOTICIA DE NEWSAPI
+# ================================================================
+def obtener_noticia_trending():
+    """Obtiene la noticia financiera/cripto más reciente de NewsAPI."""
+    try:
+        url = "https://newsapi.org/v2/top-headlines"
+        params = {
+            "category": "business",
+            "language": "es",
+            "apiKey": NEWSAPI_KEY,
+            "pageSize": 5,
+            "country": "mx"
+        }
+        r = requests.get(url, params=params, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            if data.get("articles"):
+                # Buscar artículos que mencionen cripto o finanzas
+                for article in data["articles"]:
+                    title = article.get("title", "")
+                    if any(word in title.lower() for word in ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso"]):
+                        return title
+                # Si no encuentra, devuelve el primero
+                return data["articles"][0].get("title", "")
+        return None
+    except Exception as e:
+        print(f"⚠️ Error obteniendo noticia: {e}")
+        return None
+
+# ================================================================
+# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (120-140 palabras)
 # ================================================================
 def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # Temas ampliados
+    # Temas base (si no hay noticia, se usan estos)
     TEMAS_NOTICIAS = [
         "Bitcoin rompe nuevo máximo histórico", "Inflación en México y su impacto en ahorros",
         "Oro alcanza precio récord", "Bancos centrales compran oro", 
@@ -203,72 +237,62 @@ def generar_guion_financiero(tipo):
         "Fraude de Wirecard", "Estafa de PwC y Bank of Credit", "Caso de Olympus"
     ]
 
+    # 🔥 Si es noticia, intentar obtener tema en tiempo real
+    tema_elegido = None
     if tipo == "noticia":
-        tema_elegido = random.choice(TEMAS_NOTICIAS)
+        noticia_trending = obtener_noticia_trending()
+        if noticia_trending:
+            tema_elegido = noticia_trending[:100]  # Limitar longitud
+            print(f"📰 Noticia en tiempo real: {tema_elegido}")
+        else:
+            tema_elegido = random.choice(TEMAS_NOTICIAS)
     elif tipo == "educativo":
         tema_elegido = random.choice(TEMAS_EDUCATIVOS)
     else:
         tema_elegido = random.choice(TEMAS_ESTAFAS)
 
-    prompt = f"""Eres un EXPERTO EN FINANZAS, PERIODISTA ECONÓMICO y ESPECIALISTA EN SEO PARA YOUTUBE 2026.
+    prompt = f"""Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 
 📌 TEMA: "{tema_elegido}"
 📌 TIPO: {tipo.upper()}
 
-🎯 REGLAS DE CONTENIDO:
-1. Relato ENGAÑOSO y cautivador desde el primer segundo.
-2. Tono COLOQUIAL y DIRECTO.
-3. LONGITUD: 150-170 palabras exactas.
-4. ESTRUCTURA: GANCHO (5-10) → CONTEXTO (20-30) → DESARROLLO (80-90) → CIERRE PODEROSO (30-40).
-5. Cierre con CTA sutil (ej. "¿Tú qué harías?", "Esto cambió todo").
+🎯 REGLAS DE CONTENIDO VIRAL (ESTRICTAS):
+1. Escribe EXACTAMENTE entre 120 y 140 palabras.
+2. Divide el texto en 5 BLOQUES OBLIGATORIOS, etiquetados así:
+   - [GANCHO] (3-5 palabras, impacto máximo, detiene el scroll)
+   - [DATOS] (1-2 oraciones con el dato o contexto impactante)
+   - [EXPLICACION] (2-3 oraciones desarrollando el tema)
+   - [SOLUCION] (1-2 oraciones con la moraleja o conclusión)
+   - [CIERRE] (1 oración con pregunta o llamado a la acción)
 
-🎯 REGLAS SEO PARA YOUTUBE SHORTS 2026 (CRÍTICO):
-1. TÍTULO: 
-   - Longitud OBLIGATORIA: entre 50 y 70 caracteres (¡NO MENOS DE 50!).
-   - Fórmula: [PALABRA CLAVE] + [VERBO DE IMPACTO] + [GANCHO EMOCIONAL].
-   - La PRIMERA PALABRA debe ser una de las palabras_clave.
-   - Ejemplos válidos (50-70 chars):
-     * "Enron: cómo el fraude más grande de Wall Street destruyó todo"
-     * "Bitcoin en máximo histórico: ¿qué hacer con tus criptomonedas?"
-     * "FTX colapsó y esto pasó con el dinero de los inversores"
-   - PROHIBIDO: títulos genéricos o cortos.
+📐 EJEMPLO DE ESTRUCTURA (NO copies este texto, solo la forma):
+[GANCHO] ¡Bitcoin explotó!
+[DATOS] En las últimas 24 horas, el precio superó los $100,000 por primera vez en la historia.
+[EXPLICACION] Esto se debe a la aprobación de los ETFs y la creciente adopción institucional. Los bancos centrales están comprando cripto como reserva.
+[SOLUCION] Si tienes ahorros en pesos, diversificar en cripto puede protegerte de la inflación.
+[CIERRE] ¿Tú ya tienes Bitcoin o prefieres el oro?
 
-2. PALABRAS CLAVE (2-3): Términos de alto volumen de búsqueda en finanzas/cripto.
-   - Ejemplos: Bitcoin, Inflación, Oro, Inversión, Exchange, ETF, Bancos, Seguros, Finanzas personales.
-
-3. TAGS (15-20): Combina:
-   - Tags principales de alto volumen (ej. bitcoin, finanzas, inversiones, oro, criptomonedas)
-   - Tags long-tail (ej. como invertir en oro, que es un exchange, mejores ETFs 2026)
-   - Tags de tendencia (ej. mercado financiero 2026, cripto noticias)
-   - Tags geográficos (México, Latinoamérica, Estados Unidos)
-   - Tags específicos del tema (ej. Enron, FTX, Madoff)
-
-4. DESCRIPCIÓN:
-   - Línea 1: Gancho de 90 caracteres máximo.
-   - Línea 2: Contexto en una oración.
-   - Línea 3: Fuente del relato.
-   - Línea 4: CTA al canal.
-   - Línea 5: Redes sociales.
-   - Línea 6: Hashtags (máx 5, con #Shorts incluido).
-
-5. PALABRAS PORTADA: 2-3 palabras cortas e impactantes para miniatura (ej. "RÉCORD", "COLAPSO", "¿QUÉ HAGO?").
+🎯 REGLAS SEO (Títulos y Tags):
+1. TÍTULO: 50-70 caracteres, con keyword al inicio. 
+2. PALABRAS CLAVE: 2-3 términos de alto volumen (ej. Bitcoin, Inflación, Oro).
+3. TAGS: 15-20 tags (mezcla de principales, long-tail y geográficos).
+4. PALABRAS PORTADA: 2-3 palabras (ej. "RÉCORD", "COLAPSO").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 📤 RESPUESTA: Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título SEO de 50-70 caracteres con keyword al inicio",
-    "titulo_alternativo": "Segundo título para A/B testing (también de 50-70 chars)",
+    "titulo": "Título SEO de 50-70 caracteres",
+    "titulo_alternativo": "Segundo título para A/B testing",
     "anio_suceso": 2024,
     "palabras_clave": ["keyword1", "keyword2", "keyword3"],
-    "gancho_descripcion": "Gancho de 90 caracteres máximo",
-    "contexto_descripcion": "Una oración de contexto",
-    "fuente_relato": "Fuente del relato (ej. 'Basado en análisis de mercado')",
-    "texto_completo": "Relato de 150-170 palabras",
+    "gancho_descripcion": "Gancho para descripción (máx 90 chars)",
+    "contexto_descripcion": "Contexto en una oración",
+    "fuente_relato": "Fuente del relato",
+    "texto_completo": "Texto con los 5 bloques [GANCHO] ... [DATOS] ... [EXPLICACION] ... [SOLUCION] ... [CIERRE]",
     "palabras_portada": "2-3 palabras para miniatura",
-    "tags": "15-20 tags separados por coma (máx 480 caracteres)",
-    "tema_especifico": "{tema_elegido}"
+    "tags": "15-20 tags separados por coma"
 }}
 """
 
@@ -284,7 +308,7 @@ def generar_guion_financiero(tipo):
 
     for intento in range(6):
         try:
-            print(f"🔄 Intento {intento+1}/6 generando guion {tipo}...")
+            print(f"🔄 Intento {intento+1}/6 generando guion viral...")
             print(f"📌 Tema: {tema_elegido}")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
@@ -303,16 +327,21 @@ def generar_guion_financiero(tipo):
             else:
                 raise ValueError("No se encontró JSON")
 
-            # Validar texto
-            if "texto_completo" not in data or len(data["texto_completo"]) < 100:
-                raise ValueError("Texto demasiado corto")
-            data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
+            # Validar que tenga los 5 bloques
+            texto = data.get("texto_completo", "")
+            if not all(marker in texto for marker in ["[GANCHO]", "[DATOS]", "[EXPLICACION]", "[SOLUCION]", "[CIERRE]"]):
+                raise ValueError("Faltan bloques obligatorios ([GANCHO], etc.)")
+            
+            # Contar palabras
+            palabras = len(re.findall(r'\w+', texto))
+            if palabras < 100 or palabras > 160:
+                raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 120-140)")
 
-            # 🔥 FORZAR TÍTULO DE AL MENOS 50 CARACTERES
+            # Limpiar título y forzar keyword
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
-
+            
             keywords = data.get("palabras_clave", [])
             if keywords and isinstance(keywords, list) and keywords:
                 primera_kw = keywords[0].strip()
@@ -322,96 +351,37 @@ def generar_guion_financiero(tipo):
                         titulo = f"{primera_kw.capitalize()} {titulo_sin_art}"
                     else:
                         titulo = f"{primera_kw.capitalize()} {titulo}"
-
-            # 🔥 SI EL TÍTULO TIENE MENOS DE 50 CARACTERES, RELLENAR CON MÁS CONTEXTO
-            if len(titulo) < 50:
-                # Agregar más palabras al final para llegar a 50
-                tema_palabras = tema_elegido.split()
-                if len(tema_palabras) > 3:
-                    extra = " " + " ".join(tema_palabras[-3:])
-                else:
-                    extra = " - Análisis financiero completo"
-                titulo = (titulo + extra)[:70]  # Cortar en 70 si excede
-                # Asegurar que termine bien
-                if len(titulo) < 50:
-                    titulo = titulo + " - Lo que debes saber"
-                    titulo = titulo[:70]
-
+                if len(titulo) > 75:
+                    titulo = titulo[:72] + "..."
             data["titulo"] = titulo
 
             if titulo_ya_publicado(titulo):
-                print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
                 raise ValueError("Título duplicado")
 
-            # Generar hashtags
-            hashtags = ["#Shorts"]
-            if keywords:
-                for kw in keywords[:2]:
-                    kw_clean = re.sub(r'[áéíóú]', lambda m: {'á':'a','é':'e','í':'i','ó':'o','ú':'u'}.get(m.group(), m.group()), kw)
-                    kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
-                    if kw_clean and len(kw_clean) > 2:
-                        hashtags.append(f"#{kw_clean.capitalize()}")
-            hashtags.append(random.choice(["#Finanzas", "#Cripto", "#Inversiones", "#Economía", "#Oro", "#Bancos", "#EducaciónFinanciera"]))
-            data["hashtags_descripcion"] = " ".join(hashtags)
+            # 🔥 HASHTAGS ESTRATÉGICOS: 1 de cada grupo
+            hashtag_alto = random.choice(HASHTAGS_ALTO_VOLUMEN)
+            hashtag_medio = random.choice(HASHTAGS_MEDIO_VOLUMEN)
+            hashtag_bajo = random.choice(HASHTAGS_BAJO_VOLUMEN)
+            data["hashtags_descripcion"] = f"#Shorts {hashtag_alto} {hashtag_medio} {hashtag_bajo}"
 
-            # 🔥 MEJORAR TAGS: Asegurar variedad y alto volumen
+            # 🔥 TAGS mejorados
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
-            
-            # Tags principales (siempre presentes)
-            tags_principales = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges", "criptomonedas", "mercado financiero", "educación financiera"]
-            
-            # Tags específicos por tema
-            tema_lower = tema_elegido.lower()
-            if "bitcoin" in tema_lower or "cripto" in tema_lower:
-                tags_principales.extend(["bitcoin", "criptomonedas", "blockchain", "inversiones en cripto"])
-            if "oro" in tema_lower:
-                tags_principales.extend(["oro", "inversiones en oro", "metales preciosos", "reserva de valor"])
-            if "estafa" in tema_lower or "fraude" in tema_lower or "colapso" in tema_lower:
-                tags_principales.extend(["estafas financieras", "fraude", "crisis financiera", "historia de fraudes"])
-            if "etf" in tema_lower:
-                tags_principales.extend(["etf", "fondos cotizados", "inversiones pasivas"])
-            if "seguro" in tema_lower:
-                tags_principales.extend(["seguros", "protección financiera", "planeación financiera"])
-            
-            # Tags geográficos
-            tags_geograficos = ["méxico", "latinoamérica", "estados unidos", "wall street", "economía global"]
-            
-            # Tags long-tail
-            tags_longtail = [
-                "como invertir", "que es un exchange", "mejores ETFs", "ahorros e inversiones",
-                "finanzas personales", "educación financiera para principiantes", "mercados financieros",
-                "análisis económico", "consejos financieros", "inversiones seguras", "dinero e inversión"
-            ]
-            
-            # Mezclar y seleccionar 15-20 tags
-            tags_final = set()
-            # Añadir keywords principales
             for kw in keywords:
-                if kw.lower() not in tags_final:
-                    tags_final.add(kw.lower())
-            # Añadir tags principales (hasta 8)
-            for tag in tags_principales:
-                if len(tags_final) < 8:
-                    tags_final.add(tag)
-            # Añadir tags geográficos (2-3)
-            for tag in random.sample(tags_geograficos, min(3, len(tags_geograficos))):
-                if len(tags_final) < 12:
-                    tags_final.add(tag)
-            # Añadir tags long-tail (hasta 15-18)
-            for tag in random.sample(tags_longtail, min(6, len(tags_longtail))):
-                if len(tags_final) < 18:
-                    tags_final.add(tag)
-            # Añadir tags del tema (si no están ya)
-            for tag in tags_list:
-                if len(tags_final) < 20 and tag.lower() not in tags_final and len(tag) > 2:
-                    tags_final.add(tag.lower())
-            
-            data["tags"] = ", ".join(list(tags_final)[:20])
-            
+                if kw.lower() not in [t.lower() for t in tags_list]:
+                    tags_list.append(kw.lower())
+            extras = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges"]
+            i = 0
+            while len(tags_list) < 12 and i < len(extras):
+                if extras[i] not in tags_list:
+                    tags_list.append(extras[i])
+                i += 1
+            data["tags"] = ", ".join(tags_list[:20])
+
             print(f"   🏷️ Título: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   🔑 Keywords: {keywords}")
-            print(f"   📌 Tema: {data.get('tema_especifico', 'N/A')}")
+            print(f"   📊 Palabras: {palabras}")
+            print(f"   🏷️ Hashtags: {data['hashtags_descripcion']}")
             return data
             
         except Exception as e:
@@ -423,58 +393,96 @@ def generar_guion_financiero(tipo):
     sys.exit(1)
 
 # ================================================================
-# 🎨 GENERAR PROMPT DE IMAGEN CON ESTRATEGIA REAL + NEÓN
+# 📝 DIVIDIR EN 5 SEGMENTOS (los 5 bloques)
 # ================================================================
-def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, 
-                                   segmento_anterior_texto=None, 
-                                   index_segmento=0, total_segmentos=1, 
+def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
+    """Extrae los bloques [GANCHO], [DATOS], [EXPLICACION], [SOLUCION], [CIERRE] y los devuelve como segmentos."""
+    patron = r'\[GANCHO\](.*?)(?=\[DATOS\]|$)|\[DATOS\](.*?)(?=\[EXPLICACION\]|$)|\[EXPLICACION\](.*?)(?=\[SOLUCION\]|$)|\[SOLUCION\](.*?)(?=\[CIERRE\]|$)|\[CIERRE\](.*?)$'
+    matches = re.findall(patron, texto, re.DOTALL)
+    
+    segmentos = []
+    for grupo in matches:
+        for parte in grupo:
+            if parte and parte.strip():
+                parte_limpia = parte.strip()
+                palabras = parte_limpia.split()
+                if len(palabras) > max_palabras_por_segmento:
+                    for i in range(0, len(palabras), max_palabras_por_segmento):
+                        sub_segmento = ' '.join(palabras[i:i+max_palabras_por_segmento])
+                        segmentos.append(sub_segmento)
+                else:
+                    segmentos.append(parte_limpia)
+    
+    if not segmentos:
+        oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
+        segmentos = [o.strip() for o in oraciones if o.strip()]
+    
+    if not segmentos:
+        segmentos = [texto]
+    
+    if len(segmentos) > 5:
+        while len(segmentos) > 5:
+            segmentos[-2] = segmentos[-2] + " " + segmentos[-1]
+            segmentos.pop()
+    
+    return segmentos
+
+# ================================================================
+# 🎭 ASIGNAR ETAPAS VISUALES (hasta 5 segmentos)
+# ================================================================
+def asignar_etapas_visuales(segmentos):
+    n = len(segmentos)
+    etapas = []
+    ubicaciones = []
+    
+    mapa_etapas = [
+        "contexto_general",
+        "analisis_datos",
+        "evento_principal",
+        "climax",
+        "resolucion"
+    ]
+    mapa_ubicaciones = [
+        "distrito financiero moderno, impacto visual",
+        "sala de trading con gráficos y datos",
+        "lugar del suceso financiero (banco, exchange)",
+        "momento crítico de máxima tensión",
+        "conclusión, ambiente calmado"
+    ]
+    
+    for i in range(n):
+        idx = min(i, len(mapa_etapas) - 1)
+        etapas.append(mapa_etapas[idx])
+        ubicaciones.append(mapa_ubicaciones[idx])
+    
+    return etapas, ubicaciones
+
+# ================================================================
+# 🎨 GENERAR PROMPT DE IMAGEN (REAL+NEÓN)
+# ================================================================
+def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
+                                   segmento_anterior_texto=None,
+                                   index_segmento=0, total_segmentos=1,
                                    tema=None, es_primer_frame=False):
-    """
-    Estrategia visual de retención:
-    - Frame 0 (primer segmento): NEÓN impactante (scroll-stopper)
-    - Segmentos intermedios: REAL + acento neón (10-30%)
-    - Último segmento: 100% REAL (cierre creíble)
-    """
+    global COLOR_NEON_ACTUAL, PALETA_BASE_ACTUAL
+    
     contexto_previo = ""
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: '{segmento_anterior_texto[:120]}'"
 
-    # Determinar el estilo de imagen según la etapa y posición
     if es_primer_frame and index_segmento == 0:
-        # Primer frame: NEÓN impactante (scroll-stopper)
-        estilo_base = f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on surfaces, high contrast, electric atmosphere, dramatic shadows, futuristic corporate look"
-        porcentaje_real = 0
-        porcentaje_neon = 100
+        estilo_base = f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on surfaces, high contrast, electric atmosphere, futuristic corporate look"
     elif etapa in ["climax"]:
-        # Clímax: Real + NEÓN fuerte (50/50)
         estilo_base = f"Hyperrealistic photography combined with intense {COLOR_NEON_ACTUAL} neon accents, dramatic lighting, high contrast, cinematic composition, financial crisis atmosphere"
-        porcentaje_real = 50
-        porcentaje_neon = 50
     elif etapa in ["evento_principal", "analisis_datos"]:
-        # Evento principal: Real + acento neón (70/30)
         estilo_base = f"Realistic photograph with subtle {COLOR_NEON_ACTUAL} neon highlights, natural lighting mixed with artificial glow, professional corporate setting"
-        porcentaje_real = 70
-        porcentaje_neon = 30
     elif etapa in ["contexto_general"]:
-        # Contexto: Real puro (100% real)
-        estilo_base = f"Authentic documentary-style photograph, natural lighting, real-world environment, no filters, no neon"
-        porcentaje_real = 100
-        porcentaje_neon = 0
-    else:  # resolución
-        # Resolución: 100% REAL (cierre creíble)
-        estilo_base = f"Realistic, natural photograph, natural lighting, authentic environment, calm atmosphere, no artificial effects"
-        porcentaje_real = 100
-        porcentaje_neon = 0
-
-    # Construir prompt con nivel de detalle según el estilo
-    if porcentaje_neon > 70:
-        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL} with {COLOR_NEON_ACTUAL} accents, sharp focus, hyperdetailed, 8k resolution, cinematic"
-    elif porcentaje_neon > 20:
-        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL} with subtle neon touches, realistic textures, professional photography, 4k quality"
+        estilo_base = "Authentic documentary-style photograph, natural lighting, real-world environment, no filters, no neon"
     else:
-        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL}, natural tones, documentary style, sharp focus, authentic"
+        estilo_base = "Realistic, natural photograph, natural lighting, authentic environment, calm atmosphere, no artificial effects"
 
-    # Ajustar según el tema (agregar elementos específicos)
+    descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL}, sharp focus, hyperdetailed, 8k resolution, cinematic"
+
     tema_lower = tema.lower() if tema else ""
     if "bitcoin" in tema_lower or "cripto" in tema_lower:
         elementos_tema = "digital currency, blockchain data, crypto screens, modern fintech environment"
@@ -485,9 +493,8 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
     else:
         elementos_tema = "modern financial setting, professional environment"
 
-    # Construir prompt completo
     prompt = f"""
-You are a WORLD-CLASS CINEMATOGRAPHER specializing in FINANCIAL PHOTOGRAPHY with a focus on RETENTION OPTIMIZATION.
+You are a WORLD-CLASS CINEMATOGRAPHER specializing in FINANCIAL PHOTOGRAPHY.
 
 STORY FRAGMENT:
 \"\"\"
@@ -503,13 +510,12 @@ SCENE DETAILS:
 - VISUAL STYLE: {descripcion_estilo}
 - SUBJECT: {elementos_tema}
 
-COMPOSITION RULES (CRITICAL FOR RETENTION):
+COMPOSITION RULES:
 1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces.
-2. MAIN SUBJECT: The environment, objects, and setting (buildings, computers, screens, documents, gold, etc.).
+2. MAIN SUBJECT: The environment, objects, and setting.
 3. If people appear: They occupy AT MOST 15% of the frame, small and at distance.
 4. FOCUS: Sharp, hyperrealistic, premium quality.
 5. ATMOSPHERE: Professional, sophisticated, clean, high-end.
-6. COLOR HARMONY: {PALETA_BASE_ACTUAL} with appropriate neon accents as indicated.
 
 ABSOLUTE PROHIBITIONS:
 - NO close-up faces, NO portraits, NO headshots
@@ -517,7 +523,6 @@ ABSOLUTE PROHIBITIONS:
 - NO clones, NO duplicates, NO twins
 - NO text, NO watermarks, NO logos
 - NO low quality, NO blurry images
-- NO abandoned or ruined environments (unless specifically historical)
 
 Return ONLY the English prompt, no explanations.
 """
@@ -534,12 +539,10 @@ Return ONLY the English prompt, no explanations.
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         prompt_img = r.json()["choices"][0]["message"]["content"].strip()
-        # Añadir detalles de calidad premium
         prompt_img += f", hyperrealistic, 8k resolution, sharp focus, professional corporate photography, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no text, no watermark"
         return prompt_img
     except Exception as e:
-        print(f"⚠️ Error generando prompt de imagen: {e}")
-        # Fallback con estilo básico
+        print(f"⚠️ Error generando prompt: {e}")
         return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
 
 # ================================================================
@@ -595,7 +598,7 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 📝 GENERAR AUDIO
+# 📝 GENERAR AUDIO CON JORGE (voz fija)
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -607,30 +610,21 @@ def generar_audio(texto, index, intentos_por_voz=2):
         texto_limpio = "Noticias financieras de hoy en Capital Digital."
     
     filename = f"audio_capital_{index}.mp3"
+    voz = CONFIG_VOZ_ACTUAL["voz"]
+    rate = CONFIG_VOZ_ACTUAL["velocidad"]
+    pitch = CONFIG_VOZ_ACTUAL["tono"]
     
-    voces_a_probar = [CONFIG_VOZ_ACTUAL] + [v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]]
-    
-    for voz_config in voces_a_probar:
-        voz = voz_config["voz"]
-        rate = voz_config["velocidad"]
-        pitch = voz_config["tono"]
-        
-        for intento in range(intentos_por_voz):
-            async def _gen():
-                communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
-                await communicate.save(filename)
-            
-            try:
-                asyncio.run(_gen())
-                if os.path.exists(filename) and os.path.getsize(filename) > 0:
-                    if voz != CONFIG_VOZ_ACTUAL["voz"]:
-                        print(f"🔄 Voz cambiada a {voz_config['nombre']}")
-                        CONFIG_VOZ_ACTUAL = voz_config
-                    return filename
-            except Exception as e:
-                print(f"   ❌ Falló {voz_config['nombre']}: {e}")
-            time.sleep(3)
-        
+    for intento in range(intentos_por_voz):
+        async def _gen():
+            communicate = edge_tts.Communicate(texto_limpio, voz, rate=rate, pitch=pitch)
+            await communicate.save(filename)
+        try:
+            asyncio.run(_gen())
+            if os.path.exists(filename) and os.path.getsize(filename) > 0:
+                return filename
+        except Exception as e:
+            print(f"   ❌ Falló voz {voz}: {e}")
+        time.sleep(3)
         if os.path.exists(filename):
             try: os.remove(filename)
             except: pass
@@ -638,7 +632,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO (con estrategia visual)
+# 🎬 GENERAR RECURSOS POR SEGMENTO
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
@@ -649,18 +643,13 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         etapa = etapas[idx] if idx < len(etapas) else "contexto_general"
         ubic = ubicaciones[idx] if idx < len(ubicaciones) else "oficina financiera"
         seg_anterior = segmentos[idx-1] if idx > 0 else None
-        
-        # Determinar si es el primer frame (scroll-stopper)
         es_primer_frame = (idx == 0)
         
-        # Generar prompt con estrategia real+neón
         prompt_img = generar_prompt_imagen_segmento(
-            seg, etapa, ubic, seg_anterior, 
-            idx, total, tema, es_primer_frame
+            seg, etapa, ubic, seg_anterior, idx, total, tema, es_primer_frame
         )
-        print(f"    📝 Prompt generado (primeros 120 chars): {prompt_img[:120]}...")
+        print(f"    📝 Prompt: {prompt_img[:100]}...")
         
-        # Generar imagen
         img_url = None
         for intento in range(intentos_imagen):
             img_url = generar_imagen_vertical(prompt_img, intentos=1)
@@ -673,7 +662,6 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             print(f"    ⚠️ Imagen falló, usando placeholder")
             img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
         
-        # Generar audio
         audio_path = generar_audio(seg, idx)
         if not audio_path:
             print(f"    ❌ Falló audio en segmento {idx+1}. Abortando.")
@@ -688,8 +676,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             "imagen_url": img_url,
             "audio_path": audio_path,
             "duracion": dur,
-            "etapa": etapa,
-            "estilo": "real+neon" if "neon" in prompt_img.lower() else "real"
+            "texto": seg
         })
         
         if idx < total - 1:
@@ -698,7 +685,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
     return recursos
 
 # ================================================================
-# 🎬 MONTAR VIDEO SHORTS
+# 🎬 MONTAR VIDEO CON SUBTÍTULOS QUEMADOS (TextClip)
 # ================================================================
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
@@ -711,8 +698,9 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
         img_url = rec["imagen_url"]
         audio_path = rec["audio_path"]
         duracion = rec["duracion"]
+        texto = rec.get("texto", "")
         
-        # Procesar imagen
+        # Procesar imagen de fondo
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -733,6 +721,32 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             img = Image.new("RGB", (1080, 1920), (20, 20, 50))
             img.save(img_path)
             video_clip = ImageClip(img_path).set_duration(duracion)
+        
+        # 🔥 SUBTÍTULOS QUEMADOS con TextClip (Opción A - moviepy)
+        try:
+            # Limpiar texto para subtítulo (solo primeras 2 líneas)
+            palabras = texto.split()
+            if len(palabras) > 12:
+                texto_sub = ' '.join(palabras[:12])
+            else:
+                texto_sub = texto
+            
+            # Crear subtítulo con fondo semi-transparente
+            txt_clip = TextClip(
+                texto_sub,
+                fontsize=50,
+                color='white',
+                stroke_color='black',
+                stroke_width=3,
+                font='Arial',
+                method='caption',
+                size=(900, None)
+            ).set_position(('center', 1650)).set_duration(duracion)
+            
+            # Combinar imagen + subtítulo
+            video_clip = CompositeVideoClip([video_clip, txt_clip])
+        except Exception as e:
+            print(f"⚠️ Error en subtítulo {i}: {e}")
         
         clips_video.append(video_clip)
         
@@ -789,9 +803,67 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     return salida
 
 # ================================================================
-# 🚀 SUBIR A YOUTUBE CON DISCLOSURE IA
+# 🖼️ GENERAR MINIATURA PERSONALIZADA (1280x720 con texto)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente=""):
+def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.jpg"):
+    """Crea una miniatura horizontal 16:9 con texto grande superpuesto."""
+    try:
+        # Descargar imagen
+        if imagen_url.startswith("http"):
+            r = requests.get(imagen_url, timeout=30)
+            r.raise_for_status()
+            img_path = "temp_thumb.jpg"
+            with open(img_path, "wb") as f:
+                f.write(r.content)
+        else:
+            img_path = imagen_url
+        
+        # Redimensionar a 1280x720
+        img = Image.open(img_path)
+        img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
+        
+        # Agregar texto
+        draw = ImageDraw.Draw(img)
+        
+        # Intentar cargar fuente grande, si no existe usar default
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
+        except:
+            try:
+                font = ImageFont.truetype("arial.ttf", 120)
+            except:
+                font = ImageFont.load_default()
+        
+        # Texto en mayúsculas
+        texto = texto_portada.upper().strip()
+        # Limitar a 3 palabras
+        palabras = texto.split()
+        if len(palabras) > 3:
+            texto = ' '.join(palabras[:3])
+        
+        # Calcular posición centrada (abajo)
+        bbox = draw.textbbox((0, 0), texto, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = (1280 - text_width) // 2
+        y = 720 - text_height - 60
+        
+        # Sombra para legibilidad
+        sombra_offset = 4
+        draw.text((x + sombra_offset, y + sombra_offset), texto, fill='black', font=font)
+        draw.text((x, y), texto, fill='white', font=font)
+        
+        img.save(salida)
+        print(f"✅ Miniatura personalizada creada: {salida}")
+        return salida
+    except Exception as e:
+        print(f"⚠️ Error creando miniatura: {e}")
+        return None
+
+# ================================================================
+# 🚀 SUBIR A YOUTUBE CON MINIATURA Y DISCLOSURE IA
+# ================================================================
+def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -838,6 +910,16 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     response = request.execute()
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
+    
+    # Subir miniatura personalizada
+    if miniatura_path and os.path.exists(miniatura_path):
+        try:
+            media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
+            youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
+            print("✅ Miniatura personalizada subida exitosamente")
+        except Exception as e:
+            print(f"⚠️ Error subiendo miniatura: {e}")
+    
     return video_id
 
 # ================================================================
@@ -845,11 +927,16 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de SHORTS (Estrategia REAL+NEÓN)")
+    print("🎬 Capital Digital - Bot de SHORTS (Versión DEFINITIVA)")
+    print("   ✓ Voz fija (Jorge)")
+    print("   ✓ Miniatura personalizada")
+    print("   ✓ Subtítulos quemados")
+    print("   ✓ Trend-Jacking con NewsAPI")
+    print("   ✓ Hashtags estratégicos")
+    print("   ✓ Estructura viral 120-140 palabras")
+    print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['nombre']}")
-    print(f"🎨 Paleta: {PALETA_BASE_ACTUAL}")
-    print(f"💡 Color neón: {COLOR_NEON_ACTUAL}")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -877,7 +964,8 @@ def main():
     guion = generar_guion_financiero(tipo)
     texto = guion["texto_completo"]
     tema = guion.get("tema_especifico", "")
-    print(f"📝 Texto: {len(texto.split())} palabras")
+    palabras_portada = guion.get("palabras_portada", "RÉCORD")
+    print(f"📝 Texto: {len(re.findall(r'\w+', texto))} palabras")
     print(f"📌 Tema: {tema}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
@@ -889,9 +977,20 @@ def main():
         print("❌ Error generando recursos.")
         sys.exit(1)
     
+    # Montar video con subtítulos
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video generado: {video_path}")
     
+    # Crear miniatura personalizada
+    miniatura_path = None
+    if recursos and recursos[0].get("imagen_url"):
+        miniatura_path = crear_miniatura_personalizada(
+            recursos[0]["imagen_url"],
+            palabras_portada,
+            "miniatura.jpg"
+        )
+    
+    # Subir a YouTube
     video_id = subir_a_youtube(
         video_path=video_path,
         titulo=guion["titulo"],
@@ -899,7 +998,8 @@ def main():
         gancho=guion["gancho_descripcion"],
         contexto=guion["contexto_descripcion"],
         hashtags=guion["hashtags_descripcion"],
-        fuente=guion.get("fuente_relato", "Basado en análisis financiero")
+        fuente=guion.get("fuente_relato", "Basado en análisis financiero"),
+        miniatura_path=miniatura_path
     )
     
     guardar_titulo_publicado(guion["titulo"])
@@ -909,63 +1009,6 @@ def main():
     print("✅ Short publicado exitosamente!")
     print(f"🔗 https://youtu.be/{video_id}")
     print("="*60)
-
-# ================================================================
-# AUXILIARES
-# ================================================================
-def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
-    oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
-    oraciones = [o.strip() for o in oraciones if o.strip()]
-    if not oraciones:
-        return [texto]
-    
-    segmentos = []
-    segmento_actual = []
-    palabras_actuales = 0
-    
-    for oracion in oraciones:
-        palabras_oracion = len(oracion.split())
-        if palabras_actuales + palabras_oracion > max_palabras_por_segmento and segmento_actual:
-            segmentos.append(" ".join(segmento_actual))
-            segmento_actual = [oracion]
-            palabras_actuales = palabras_oracion
-        else:
-            segmento_actual.append(oracion)
-            palabras_actuales += palabras_oracion
-    
-    if segmento_actual:
-        segmentos.append(" ".join(segmento_actual))
-    
-    return segmentos
-
-def asignar_etapas_visuales(segmentos):
-    n = len(segmentos)
-    etapas = []
-    ubicaciones = []
-    
-    for i in range(n):
-        progreso = i / max(n-1, 1)
-        
-        if progreso < 0.2:
-            etapa = "contexto_general"
-            ubic = "distrito financiero moderno, oficinas corporativas, entorno profesional"
-        elif progreso < 0.4:
-            etapa = "analisis_datos"
-            ubic = "sala de trading con pantallas, gráficos financieros, computadoras"
-        elif progreso < 0.65:
-            etapa = "evento_principal"
-            ubic = "lugar del suceso financiero (banco, exchange, junta ejecutiva)"
-        elif progreso < 0.85:
-            etapa = "climax"
-            ubic = "momento crítico, tensión financiera máxima"
-        else:
-            etapa = "resolucion"
-            ubic = "conclusión, regreso a la normalidad, ambiente calmado"
-        
-        etapas.append(etapa)
-        ubicaciones.append(ubic)
-    
-    return etapas, ubicaciones
 
 if __name__ == "__main__":
     try:
