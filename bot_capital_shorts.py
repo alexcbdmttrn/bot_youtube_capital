@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 import random
@@ -35,12 +35,13 @@ YOUTUBE_USER_TOKEN = (
     else {}
 )
 NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"
-FACEBOOK_LINK = ""  # Sin Facebook por ahora
 CANAL_LINK = "https://www.youtube.com/@CapitalDigitalInversiones"
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
+TEMAS_PUBLICADOS_FILE = "temas_publicados.json"
 META_DIARIA_SHORTS = 3
 ACTIVAR_DISCLOSURE_IA = True
+DIAS_SIN_REPETIR_TEMA = 30
 
 # ================================================================
 # VOZ FIJA (Jorge)
@@ -176,6 +177,42 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
+# 📁 TEMAS PUBLICADOS (evitar repeticiones)
+# ================================================================
+def cargar_temas_publicados():
+    try:
+        with open(TEMAS_PUBLICADOS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("temas", [])
+    except:
+        return []
+
+def guardar_tema_publicado(tema, tipo):
+    temas = cargar_temas_publicados()
+    tema_data = {
+        "tema": tema,
+        "tipo": tipo,
+        "fecha": datetime.now(pytz.timezone("America/Mexico_City")).strftime("%Y-%m-%d")
+    }
+    temas.append(tema_data)
+    # Mantener solo los últimos 200
+    if len(temas) > 200:
+        temas = temas[-200:]
+    with open(TEMAS_PUBLICADOS_FILE, "w", encoding="utf-8") as f:
+        json.dump({"temas": temas}, f, indent=2, ensure_ascii=False)
+    print(f"📁 Tema guardado: '{tema}' ({tipo})")
+
+def tema_ya_publicado(tema, dias=30):
+    temas = cargar_temas_publicados()
+    hoy = datetime.now(pytz.timezone("America/Mexico_City")).date()
+    for t in temas:
+        if t["tema"].lower() == tema.lower():
+            fecha_tema = datetime.strptime(t["fecha"], "%Y-%m-%d").date()
+            if (hoy - fecha_tema).days < dias:
+                return True
+    return False
+
+# ================================================================
 # 🔥 EXPANSIÓN AUTOMÁTICA DE TEXTO CORTO
 # ================================================================
 def expandir_texto_corto(texto_corto, tema):
@@ -245,58 +282,98 @@ def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    TEMAS_NOTICIAS = [
-        "Bitcoin rompe nuevo máximo histórico", "Inflación en México y su impacto en ahorros",
-        "Oro alcanza precio récord", "Bancos centrales compran oro", 
-        "Nuevo exchange de criptomonedas", "Regulación de cripto en Latinoamérica",
-        "ETF de Bitcoin aprobado", "Remesas con criptomonedas", "Banca digital en México",
-        "Seguros de vida con cripto", "Inversiones sostenibles", "Peso mexicano vs dólar",
-        "Nuevo presidente de la CNBV", "Fintech en México 2026", "Cripto como reserva de valor"
+    # ================================================================
+    # 📌 NICHOS GENERALES (el bot elige aleatoriamente, DeepSeek desarrolla)
+    # ================================================================
+    NICHOS_EDUCATIVOS = [
+        "Inversiones en criptomonedas",
+        "Estrategias para ahorrar e invertir",
+        "Conceptos básicos del mercado financiero",
+        "Cómo funciona la bolsa de valores",
+        "Educación sobre seguros y protección financiera",
+        "Análisis de activos: oro, acciones, bonos",
+        "Finanzas personales y presupuestos",
+        "Tecnología financiera (fintech)",
+        "Planificación para el retiro",
+        "Impuestos y declaraciones fiscales"
     ]
-    TEMAS_EDUCATIVOS = [
-        "¿Cómo funciona un exchange de criptomonedas?", "¿Qué es el oro como inversión?",
-        "¿Cómo proteger tus ahorros de la inflación?", "¿Qué son los ETFs?",
-        "¿Cómo funcionan los seguros de vida?", "¿Qué es un swap en finanzas?",
-        "¿Cómo invertir en bienes raíces?", "¿Qué es la diversificación?",
-        "¿Cómo funciona el mercado de acciones?", "¿Qué son las criptomonedas estables?",
-        "¿Qué es el interés compuesto?", "¿Cómo leer un estado financiero?",
-        "¿Qué es un fideicomiso?", "¿Cómo funciona el crowdfunding?"
-    ]
-    TEMAS_ESTAFAS = [
-        "El colapso de FTX", "La estafa de OneCoin", "Mt. Gox y el robo de Bitcoin",
-        "El fraude de Bernie Madoff", "La crisis de las hipotecas subprime 2008",
-        "El escándalo de Enron", "La estafa de QuadrigaCX", "El caso de BitConnect",
-        "Fraude de Wirecard", "Estafa de PwC y Bank of Credit", "Caso de Olympus"
+    
+    NICHOS_ESTAFAS = [
+        "Fraudes famosos en el mundo financiero",
+        "Estafas con criptomonedas",
+        "Crisis bancarias y sus lecciones",
+        "Escándalos corporativos",
+        "Estafas de inversión",
+        "Casos de corrupción financiera",
+        "Colapsos bursátiles",
+        "Estafas piramidales",
+        "Fraudes con seguros",
+        "Manipulación del mercado"
     ]
 
+    # ================================================================
+    # 🎯 SELECCIÓN DEL TEMA SEGÚN TIPO
+    # ================================================================
+    tema_elegido = None
+    
     if tipo == "noticia":
+        # Noticias: siempre de la API
         noticia_trending = obtener_noticia_trending()
-        if noticia_trending:
+        if noticia_trending and not tema_ya_publicado(noticia_trending, DIAS_SIN_REPETIR_TEMA):
             tema_elegido = noticia_trending[:100]
             print(f"📰 Noticia en tiempo real: {tema_elegido}")
         else:
-            tema_elegido = random.choice(TEMAS_NOTICIAS)
+            # Si la noticia ya fue usada o no hay, usamos un nicho educativo como respaldo
+            print("⚠️ Noticia ya usada o no disponible. Usando nicho educativo...")
+            tipo = "educativo"
+            temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
+            tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_EDUCATIVOS)
+    
     elif tipo == "educativo":
-        tema_elegido = random.choice(TEMAS_EDUCATIVOS)
-    else:
-        tema_elegido = random.choice(TEMAS_ESTAFAS)
+        # Educativo: elegir de nichos educativos no usados recientemente
+        temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
+        if temas_disponibles:
+            tema_elegido = random.choice(temas_disponibles)
+        else:
+            # Si todos están usados, forzar uno (pero se guardará igual)
+            tema_elegido = random.choice(NICHOS_EDUCATIVOS)
+            print(f"⚠️ Todos los nichos educativos usados en los últimos {DIAS_SIN_REPETIR_TEMA} días. Forzando: {tema_elegido}")
+    
+    else:  # estafa
+        # Estafa: elegir de nichos de estafas no usados recientemente
+        temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
+        if temas_disponibles:
+            tema_elegido = random.choice(temas_disponibles)
+        else:
+            tema_elegido = random.choice(NICHOS_ESTAFAS)
+            print(f"⚠️ Todos los nichos de estafa usados en los últimos {DIAS_SIN_REPETIR_TEMA} días. Forzando: {tema_elegido}")
 
+    print(f"📌 Tema seleccionado: {tema_elegido}")
+    print(f"📌 Tipo: {tipo.upper()}")
+
+    # ================================================================
+    # PROMPT PARA DEEPSEEK (GENERAL, DESARROLLA EL NICHO)
+    # ================================================================
     prompt = f"""Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 
-📌 TEMA: "{tema_elegido}"
-📌 TIPO: {tipo.upper()}
+📌 NICHO O TEMA BASE: "{tema_elegido}"
+📌 TIPO DE CONTENIDO: {tipo.upper()}
+
+🎯 INSTRUCCIONES:
+Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque específico dentro del nicho, como un caso real, una lección práctica, un dato impactante o una historia ejemplar.
 
 🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
-1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras. Si el texto queda más corto, amplía con más contexto, ejemplos o consecuencias.
+1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras.
 2. Divide el texto en 5 BLOQUES OBLIGATORIOS:
-   - [GANCHO] (3-5 palabras, impacto máximo)
-   - [DATOS] (1-2 oraciones con el dato impactante)
+   - [GANCHO] (3-5 palabras, impacto máximo, detiene el scroll)
+   - [DATOS] (1-2 oraciones con el dato impactante o contexto)
    - [EXPLICACION] (3-4 oraciones desarrollando el tema)
-   - [SOLUCION] (2-3 oraciones con la moraleja)
+   - [SOLUCION] (2-3 oraciones con la moraleja o conclusión)
    - [CIERRE] (1 oración con pregunta o CTA)
 3. Asegúrate de que cada bloque tenga suficiente contenido. No te limites a frases cortas.
+4. Usa un tono coloquial, directo y cercano. Como si estuvieras contando una historia a un amigo.
 
-📐 EJEMPLO DE LONGITUD APROPIADA (NO copies el contenido, solo la extensión):
+📐 EJEMPLO DE ESTRUCTURA (NO copies el contenido, solo la extensión):
 [GANCHO] ¡El Bitcoin se desplomó!
 [DATOS] En solo 24 horas, el precio cayó un 15% después de que el gobierno de Estados Unidos anunciara nuevas regulaciones.
 [EXPLICACION] Esta caída ha generado pánico entre los inversores minoristas, que ven cómo sus ahorros se evaporan. Los grandes fondos de inversión, sin embargo, están aprovechando para comprar a precios bajos, esperando una recuperación en los próximos meses. La volatilidad del mercado cripto es extrema, pero también ofrece oportunidades.
@@ -305,8 +382,8 @@ def generar_guion_financiero(tipo):
 
 🎯 REGLAS SEO:
 1. TÍTULO: 50-70 caracteres, con keyword al inicio.
-2. PALABRAS CLAVE: 2-3 términos de alto volumen.
-3. TAGS: 15-20 tags.
+2. PALABRAS CLAVE: 2-3 términos de alto volumen (ej. Bitcoin, Inflación, Oro).
+3. TAGS: 15-20 tags (mezcla de principales, long-tail y geográficos).
 4. PALABRAS PORTADA: 2-3 palabras (ej. "RÉCORD", "COLAPSO").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
@@ -320,7 +397,7 @@ def generar_guion_financiero(tipo):
     "palabras_clave": ["keyword1", "keyword2", "keyword3"],
     "gancho_descripcion": "Gancho para descripción (máx 90 chars)",
     "contexto_descripcion": "Contexto en una oración",
-    "fuente_relato": "Fuente del relato",
+    "fuente_relato": "Fuente del relato (ej. 'Basado en hechos reales')",
     "texto_completo": "Texto con los 5 bloques [GANCHO] ... [DATOS] ... [EXPLICACION] ... [SOLUCION] ... [CIERRE] (130-150 palabras)",
     "palabras_portada": "2-3 palabras para miniatura",
     "tags": "15-20 tags separados por coma"
@@ -340,7 +417,6 @@ def generar_guion_financiero(tipo):
     for intento in range(6):
         try:
             print(f"🔄 Intento {intento+1}/6 generando guion viral...")
-            print(f"📌 Tema: {tema_elegido}")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
@@ -422,7 +498,7 @@ def generar_guion_financiero(tipo):
             print(f"   🔑 Keywords: {keywords}")
             print(f"   📊 Palabras finales: {palabras}")
             print(f"   🏷️ Hashtags: {data['hashtags_descripcion']}")
-            return data
+            return data, tema_elegido
             
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
@@ -884,7 +960,7 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.j
         return None
 
 # ================================================================
-# 🚀 SUBIR A YOUTUBE
+# 🚀 SUBIR A YOUTUBE (con disclaimer de inversión)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
@@ -897,6 +973,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
+    # 🔥 DESCRIPCIÓN: SIN disclaimer de IA (YouTube ya lo pone)
     descripcion = f"""{gancho}
 
 {contexto}
@@ -905,24 +982,23 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
 
 📖 {fuente}
 
-{hashtags}"""
+{hashtags}
 
-    if ACTIVAR_DISCLOSURE_IA:
-        descripcion += "\n\n🤖 Este contenido ha sido generado con inteligencia artificial (relato e imágenes)."
-
+⚠️ AVISO IMPORTANTE: Este contenido es solo para fines educativos y de entretenimiento. No constituye asesoría financiera, legal o de inversión. Siempre consulta con un profesional calificado antes de tomar decisiones financieras."""
+    
     body = {
         "snippet": {
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": etiquetas[:30],
-            "categoryId": "24",
+            "categoryId": "27",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,
+            "containsSyntheticMedia": True,  # 🔴 YouTube muestra "Contenido generado con IA"
         },
     }
     
@@ -955,6 +1031,8 @@ def main():
     print("   ✓ Hashtags estratégicos")
     print("   ✓ Estructura viral 130-150 palabras")
     print("   ✓ Expansión automática de texto corto")
+    print("   ✓ Control de temas usados (30 días)")
+    print("   ✓ Disclaimer financiero en descripción")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['nombre']}")
@@ -969,6 +1047,7 @@ def main():
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
+    # Elegir tipo según la hora
     hora = datetime.now(pytz.timezone("America/Mexico_City")).hour
     if 7 <= hora < 11:
         tipo = "noticia"
@@ -982,20 +1061,20 @@ def main():
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
     
-    guion = generar_guion_financiero(tipo)
+    # Generar guion (devuelve guion y tema elegido)
+    guion, tema_elegido = generar_guion_financiero(tipo)
     texto = guion["texto_completo"]
-    tema = guion.get("tema_especifico", "")
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
     
     palabras_texto = len(re.findall(r'\w+', texto))
     print(f"📝 Texto: {palabras_texto} palabras")
-    print(f"📌 Tema: {tema}")
+    print(f"📌 Tema: {tema_elegido}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
     print(f"🎬 {len(segmentos)} segmentos generados")
     
-    recursos = generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema)
+    recursos = generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema_elegido)
     if not recursos:
         print("❌ Error generando recursos.")
         sys.exit(1)
@@ -1022,7 +1101,9 @@ def main():
         miniatura_path=miniatura_path
     )
     
+    # Guardar todo
     guardar_titulo_publicado(guion["titulo"])
+    guardar_tema_publicado(tema_elegido, tipo)
     incrementar_publicaciones_hoy()
     guardar_estado(estado)
     
