@@ -1,8 +1,9 @@
-name: Bot YouTube - Video Largo Capital Digital (1 al día)
+name: Bot YouTube - Video Largo Capital Digital (1 al día + respaldo)
 
 on:
   schedule:
-    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC)
+    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC) - Principal
+    - cron: '0 22 * * *'   # 5:00 PM CDMX (22:00 UTC) - RESPARDO
   workflow_dispatch:
 
 permissions:
