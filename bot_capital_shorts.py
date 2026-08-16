@@ -25,7 +25,7 @@ import edge_tts
 import pytz
 
 # ================================================================
-# CONFIGURACIÓN – CAMBIA AQUÍ TUS DATOS
+# CONFIGURACIÓN
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
@@ -35,20 +35,15 @@ YOUTUBE_USER_TOKEN = (
     else {}
 )
 NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"
-
-# ⚠️ CAMBIA ESTO POR TU CANAL REAL
+FACEBOOK_LINK = ""  # Sin Facebook por ahora
 CANAL_LINK = "https://www.youtube.com/@CapitalDigitalInversiones"
-
-# ⚠️ SI NO TIENES FACEBOOK, DÉJALO VACÍO (NO APARECERÁ EN LA DESCRIPCIÓN)
-FACEBOOK_LINK = ""  # Déjalo vacío si no tienes página
-
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
 ACTIVAR_DISCLOSURE_IA = True
 
 # ================================================================
-# VOZ FIJA (Jorge) - IDENTIDAD SONORA
+# VOZ FIJA (Jorge)
 # ================================================================
 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
@@ -79,14 +74,14 @@ COLORES_NEON = [
 COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
 
 # ================================================================
-# HASHTAGS ESTRATÉGICOS (Alto, Medio, Bajo volumen)
+# HASHTAGS ESTRATÉGICOS
 # ================================================================
 HASHTAGS_ALTO_VOLUMEN = ["#Finanzas", "#Inversiones", "#Bitcoin", "#Economia", "#Oro", "#Bancos"]
 HASHTAGS_MEDIO_VOLUMEN = ["#CriptoHoy", "#OroInversion", "#EducacionFinanciera", "#MercadoFinanciero", "#Ahorros"]
 HASHTAGS_BAJO_VOLUMEN = ["#ETFMexico", "#SegurosDeVida", "#ExchangeSeguro", "#CrisisFinanciera", "#FinanzasPersonalesMX"]
 
 # ================================================================
-# MÚSICA DE FONDO (opcional)
+# MÚSICA DE FONDO
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
@@ -181,6 +176,42 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
+# 🔥 EXPANSIÓN AUTOMÁTICA DE TEXTO CORTO
+# ================================================================
+def expandir_texto_corto(texto_corto, tema):
+    prompt = f"""El siguiente relato financiero es demasiado corto ({len(texto_corto.split())} palabras). 
+EXPÁNDELO a 130-150 palabras añadiendo más contexto, detalles, ejemplos o consecuencias. 
+Mantén el mismo tono y estructura (GANCHO, DATOS, EXPLICACION, SOLUCION, CIERRE).
+
+TEMA: {tema}
+
+TEXTO ORIGINAL:
+{texto_corto}
+
+Devuelve SOLO el texto expandido, con los mismos bloques [GANCHO], [DATOS], [EXPLICACION], [SOLUCION], [CIERRE].
+"""
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 800,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        expanded = r.json()["choices"][0]["message"]["content"].strip()
+        if len(expanded.split()) > 100:
+            print(f"✅ Texto expandido: {len(expanded.split())} palabras")
+            return expanded
+        else:
+            return texto_corto
+    except Exception as e:
+        print(f"⚠️ Error en expansión: {e}")
+        return texto_corto
+
+# ================================================================
 # 🔥 TREND-JACKING: OBTENER NOTICIA DE NEWSAPI
 # ================================================================
 def obtener_noticia_trending():
@@ -208,7 +239,7 @@ def obtener_noticia_trending():
         return None
 
 # ================================================================
-# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (120-140 palabras)
+# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (130-150 palabras)
 # ================================================================
 def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -255,26 +286,27 @@ def generar_guion_financiero(tipo):
 📌 TEMA: "{tema_elegido}"
 📌 TIPO: {tipo.upper()}
 
-🎯 REGLAS DE CONTENIDO VIRAL (ESTRICTAS):
-1. Escribe EXACTAMENTE entre 120 y 140 palabras.
-2. Divide el texto en 5 BLOQUES OBLIGATORIOS, etiquetados así:
-   - [GANCHO] (3-5 palabras, impacto máximo, detiene el scroll)
-   - [DATOS] (1-2 oraciones con el dato o contexto impactante)
-   - [EXPLICACION] (2-3 oraciones desarrollando el tema)
-   - [SOLUCION] (1-2 oraciones con la moraleja o conclusión)
-   - [CIERRE] (1 oración con pregunta o llamado a la acción)
+🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
+1. Escribe OBLIGATORIAMENTE entre 130 y 150 palabras. Si el texto queda más corto, amplía con más contexto, ejemplos o consecuencias.
+2. Divide el texto en 5 BLOQUES OBLIGATORIOS:
+   - [GANCHO] (3-5 palabras, impacto máximo)
+   - [DATOS] (1-2 oraciones con el dato impactante)
+   - [EXPLICACION] (3-4 oraciones desarrollando el tema)
+   - [SOLUCION] (2-3 oraciones con la moraleja)
+   - [CIERRE] (1 oración con pregunta o CTA)
+3. Asegúrate de que cada bloque tenga suficiente contenido. No te limites a frases cortas.
 
-📐 EJEMPLO DE ESTRUCTURA (NO copies este texto, solo la forma):
-[GANCHO] ¡Bitcoin explotó!
-[DATOS] En las últimas 24 horas, el precio superó los $100,000 por primera vez en la historia.
-[EXPLICACION] Esto se debe a la aprobación de los ETFs y la creciente adopción institucional. Los bancos centrales están comprando cripto como reserva.
-[SOLUCION] Si tienes ahorros en pesos, diversificar en cripto puede protegerte de la inflación.
-[CIERRE] ¿Tú ya tienes Bitcoin o prefieres el oro?
+📐 EJEMPLO DE LONGITUD APROPIADA (NO copies el contenido, solo la extensión):
+[GANCHO] ¡El Bitcoin se desplomó!
+[DATOS] En solo 24 horas, el precio cayó un 15% después de que el gobierno de Estados Unidos anunciara nuevas regulaciones.
+[EXPLICACION] Esta caída ha generado pánico entre los inversores minoristas, que ven cómo sus ahorros se evaporan. Los grandes fondos de inversión, sin embargo, están aprovechando para comprar a precios bajos, esperando una recuperación en los próximos meses. La volatilidad del mercado cripto es extrema, pero también ofrece oportunidades.
+[SOLUCION] Si tienes criptomonedas, lo mejor es mantener la calma y no vender por miedo. Diversificar tu cartera con otros activos como oro o bonos puede protegerte.
+[CIERRE] ¿Tú vendiste o compraste en esta caída?
 
-🎯 REGLAS SEO (Títulos y Tags):
-1. TÍTULO: 50-70 caracteres, con keyword al inicio. 
-2. PALABRAS CLAVE: 2-3 términos de alto volumen (ej. Bitcoin, Inflación, Oro).
-3. TAGS: 15-20 tags (mezcla de principales, long-tail y geográficos).
+🎯 REGLAS SEO:
+1. TÍTULO: 50-70 caracteres, con keyword al inicio.
+2. PALABRAS CLAVE: 2-3 términos de alto volumen.
+3. TAGS: 15-20 tags.
 4. PALABRAS PORTADA: 2-3 palabras (ej. "RÉCORD", "COLAPSO").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
@@ -289,7 +321,7 @@ def generar_guion_financiero(tipo):
     "gancho_descripcion": "Gancho para descripción (máx 90 chars)",
     "contexto_descripcion": "Contexto en una oración",
     "fuente_relato": "Fuente del relato",
-    "texto_completo": "Texto con los 5 bloques [GANCHO] ... [DATOS] ... [EXPLICACION] ... [SOLUCION] ... [CIERRE]",
+    "texto_completo": "Texto con los 5 bloques [GANCHO] ... [DATOS] ... [EXPLICACION] ... [SOLUCION] ... [CIERRE] (130-150 palabras)",
     "palabras_portada": "2-3 palabras para miniatura",
     "tags": "15-20 tags separados por coma"
 }}
@@ -301,7 +333,7 @@ def generar_guion_financiero(tipo):
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 1300,
+        "max_tokens": 1400,
         "response_format": {"type": "json_object"}
     }
 
@@ -327,12 +359,25 @@ def generar_guion_financiero(tipo):
 
             texto = data.get("texto_completo", "")
             if not all(marker in texto for marker in ["[GANCHO]", "[DATOS]", "[EXPLICACION]", "[SOLUCION]", "[CIERRE]"]):
-                raise ValueError("Faltan bloques obligatorios ([GANCHO], etc.)")
-            
-            palabras = len(re.findall(r'\w+', texto))
-            if palabras < 100 or palabras > 160:
-                raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 120-140)")
+                raise ValueError("Faltan bloques obligatorios")
 
+            # Contar palabras
+            palabras = len(re.findall(r'\w+', texto))
+            print(f"   📊 Palabras generadas: {palabras}")
+            
+            # Si es muy corto (<110), expandir automáticamente
+            if palabras < 110:
+                print(f"   ⚠️ Texto demasiado corto ({palabras} palabras). Expandiendo...")
+                texto = expandir_texto_corto(texto, tema_elegido)
+                data["texto_completo"] = texto
+                palabras = len(re.findall(r'\w+', texto))
+                print(f"   📊 Palabras después de expansión: {palabras}")
+            
+            # Validar rango final (110-160)
+            if palabras < 100 or palabras > 170:
+                raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 110-160)")
+
+            # Procesar título y keywords
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
@@ -353,11 +398,13 @@ def generar_guion_financiero(tipo):
             if titulo_ya_publicado(titulo):
                 raise ValueError("Título duplicado")
 
+            # Hashtags estratégicos
             hashtag_alto = random.choice(HASHTAGS_ALTO_VOLUMEN)
             hashtag_medio = random.choice(HASHTAGS_MEDIO_VOLUMEN)
             hashtag_bajo = random.choice(HASHTAGS_BAJO_VOLUMEN)
             data["hashtags_descripcion"] = f"#Shorts {hashtag_alto} {hashtag_medio} {hashtag_bajo}"
 
+            # Tags mejorados
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             for kw in keywords:
@@ -373,7 +420,7 @@ def generar_guion_financiero(tipo):
 
             print(f"   🏷️ Título: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   🔑 Keywords: {keywords}")
-            print(f"   📊 Palabras: {palabras}")
+            print(f"   📊 Palabras finales: {palabras}")
             print(f"   🏷️ Hashtags: {data['hashtags_descripcion']}")
             return data
             
@@ -386,7 +433,7 @@ def generar_guion_financiero(tipo):
     sys.exit(1)
 
 # ================================================================
-# 📝 DIVIDIR EN 5 SEGMENTOS (los 5 bloques)
+# 📝 DIVIDIR EN 5 SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     patron = r'\[GANCHO\](.*?)(?=\[DATOS\]|$)|\[DATOS\](.*?)(?=\[EXPLICACION\]|$)|\[EXPLICACION\](.*?)(?=\[SOLUCION\]|$)|\[SOLUCION\](.*?)(?=\[CIERRE\]|$)|\[CIERRE\](.*?)$'
@@ -420,7 +467,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     return segmentos
 
 # ================================================================
-# 🎭 ASIGNAR ETAPAS VISUALES (hasta 5 segmentos)
+# 🎭 ASIGNAR ETAPAS VISUALES
 # ================================================================
 def asignar_etapas_visuales(segmentos):
     n = len(segmentos)
@@ -590,7 +637,7 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 📝 GENERAR AUDIO CON JORGE (voz fija)
+# 📝 GENERAR AUDIO CON JORGE
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -677,7 +724,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
     return recursos
 
 # ================================================================
-# 🎬 MONTAR VIDEO CON SUBTÍTULOS QUEMADOS (TextClip)
+# 🎬 MONTAR VIDEO CON SUBTÍTULOS QUEMADOS
 # ================================================================
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
@@ -789,7 +836,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     return salida
 
 # ================================================================
-# 🖼️ GENERAR MINIATURA PERSONALIZADA (1280x720 con texto)
+# 🖼️ GENERAR MINIATURA PERSONALIZADA
 # ================================================================
 def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.jpg"):
     try:
@@ -837,7 +884,7 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.j
         return None
 
 # ================================================================
-# 🚀 SUBIR A YOUTUBE CON MINIATURA Y DISCLOSURE IA
+# 🚀 SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
@@ -850,20 +897,15 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
-    # Construir descripción (sin Facebook si no está configurado)
     descripcion = f"""{gancho}
 
 {contexto}
 
 🔴 SUSCRÍBETE al canal: {CANAL_LINK}
 
-📖 {fuente}"""
+📖 {fuente}
 
-    # Solo agregar Facebook si hay enlace configurado
-    if FACEBOOK_LINK and FACEBOOK_LINK.strip():
-        descripcion += f"\n\n📱 Síguenos en Facebook: {FACEBOOK_LINK}"
-
-    descripcion += f"\n\n{hashtags}"
+{hashtags}"""
 
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += "\n\n🤖 Este contenido ha sido generado con inteligencia artificial (relato e imágenes)."
@@ -911,7 +953,8 @@ def main():
     print("   ✓ Subtítulos quemados")
     print("   ✓ Trend-Jacking con NewsAPI")
     print("   ✓ Hashtags estratégicos")
-    print("   ✓ Estructura viral 120-140 palabras")
+    print("   ✓ Estructura viral 130-150 palabras")
+    print("   ✓ Expansión automática de texto corto")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['nombre']}")
