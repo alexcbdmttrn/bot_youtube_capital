@@ -35,8 +35,8 @@ YOUTUBE_USER_TOKEN = (
     else {}
 )
 NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"  # Tu API key de NewsAPI
-FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA
-CANAL_LINK = "https://www.youtube.com/@CapitalDigital"       # ⚠️ CAMBIA
+FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA ESTO
+CANAL_LINK = "https://www.youtube.com/@CapitalDigital"       # ⚠️ CAMBIA ESTO
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
@@ -46,7 +46,7 @@ ACTIVAR_DISCLOSURE_IA = True
 # VOZ FIJA (Jorge) - IDENTIDAD SONORA
 # ================================================================
 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
-CONFIG_VOZ_ACTUAL = VOZ_FIJA  # Siempre usará Jorge
+CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
 # PALETAS Y ESTILOS VISUALES
@@ -179,7 +179,6 @@ def incrementar_publicaciones_hoy():
 # 🔥 TREND-JACKING: OBTENER NOTICIA DE NEWSAPI
 # ================================================================
 def obtener_noticia_trending():
-    """Obtiene la noticia financiera/cripto más reciente de NewsAPI."""
     try:
         url = "https://newsapi.org/v2/top-headlines"
         params = {
@@ -193,12 +192,10 @@ def obtener_noticia_trending():
         if r.status_code == 200:
             data = r.json()
             if data.get("articles"):
-                # Buscar artículos que mencionen cripto o finanzas
                 for article in data["articles"]:
                     title = article.get("title", "")
                     if any(word in title.lower() for word in ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso"]):
                         return title
-                # Si no encuentra, devuelve el primero
                 return data["articles"][0].get("title", "")
         return None
     except Exception as e:
@@ -212,7 +209,6 @@ def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # Temas base (si no hay noticia, se usan estos)
     TEMAS_NOTICIAS = [
         "Bitcoin rompe nuevo máximo histórico", "Inflación en México y su impacto en ahorros",
         "Oro alcanza precio récord", "Bancos centrales compran oro", 
@@ -237,12 +233,10 @@ def generar_guion_financiero(tipo):
         "Fraude de Wirecard", "Estafa de PwC y Bank of Credit", "Caso de Olympus"
     ]
 
-    # 🔥 Si es noticia, intentar obtener tema en tiempo real
-    tema_elegido = None
     if tipo == "noticia":
         noticia_trending = obtener_noticia_trending()
         if noticia_trending:
-            tema_elegido = noticia_trending[:100]  # Limitar longitud
+            tema_elegido = noticia_trending[:100]
             print(f"📰 Noticia en tiempo real: {tema_elegido}")
         else:
             tema_elegido = random.choice(TEMAS_NOTICIAS)
@@ -314,7 +308,6 @@ def generar_guion_financiero(tipo):
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             
-            # Limpiar JSON
             respuesta = re.sub(r"```json\s*", "", respuesta)
             respuesta = re.sub(r"```\s*", "", respuesta)
             inicio = respuesta.find("{")
@@ -327,17 +320,14 @@ def generar_guion_financiero(tipo):
             else:
                 raise ValueError("No se encontró JSON")
 
-            # Validar que tenga los 5 bloques
             texto = data.get("texto_completo", "")
             if not all(marker in texto for marker in ["[GANCHO]", "[DATOS]", "[EXPLICACION]", "[SOLUCION]", "[CIERRE]"]):
                 raise ValueError("Faltan bloques obligatorios ([GANCHO], etc.)")
             
-            # Contar palabras
             palabras = len(re.findall(r'\w+', texto))
             if palabras < 100 or palabras > 160:
                 raise ValueError(f"Palabras fuera de rango: {palabras} (debe ser 120-140)")
 
-            # Limpiar título y forzar keyword
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
@@ -358,13 +348,11 @@ def generar_guion_financiero(tipo):
             if titulo_ya_publicado(titulo):
                 raise ValueError("Título duplicado")
 
-            # 🔥 HASHTAGS ESTRATÉGICOS: 1 de cada grupo
             hashtag_alto = random.choice(HASHTAGS_ALTO_VOLUMEN)
             hashtag_medio = random.choice(HASHTAGS_MEDIO_VOLUMEN)
             hashtag_bajo = random.choice(HASHTAGS_BAJO_VOLUMEN)
             data["hashtags_descripcion"] = f"#Shorts {hashtag_alto} {hashtag_medio} {hashtag_bajo}"
 
-            # 🔥 TAGS mejorados
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             for kw in keywords:
@@ -396,7 +384,6 @@ def generar_guion_financiero(tipo):
 # 📝 DIVIDIR EN 5 SEGMENTOS (los 5 bloques)
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
-    """Extrae los bloques [GANCHO], [DATOS], [EXPLICACION], [SOLUCION], [CIERRE] y los devuelve como segmentos."""
     patron = r'\[GANCHO\](.*?)(?=\[DATOS\]|$)|\[DATOS\](.*?)(?=\[EXPLICACION\]|$)|\[EXPLICACION\](.*?)(?=\[SOLUCION\]|$)|\[SOLUCION\](.*?)(?=\[CIERRE\]|$)|\[CIERRE\](.*?)$'
     matches = re.findall(patron, texto, re.DOTALL)
     
@@ -700,7 +687,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
         duracion = rec["duracion"]
         texto = rec.get("texto", "")
         
-        # Procesar imagen de fondo
         try:
             if img_url.startswith("http"):
                 r = requests.get(img_url, timeout=30)
@@ -722,16 +708,14 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             img.save(img_path)
             video_clip = ImageClip(img_path).set_duration(duracion)
         
-        # 🔥 SUBTÍTULOS QUEMADOS con TextClip (Opción A - moviepy)
+        # Subtítulos
         try:
-            # Limpiar texto para subtítulo (solo primeras 2 líneas)
             palabras = texto.split()
             if len(palabras) > 12:
                 texto_sub = ' '.join(palabras[:12])
             else:
                 texto_sub = texto
             
-            # Crear subtítulo con fondo semi-transparente
             txt_clip = TextClip(
                 texto_sub,
                 fontsize=50,
@@ -743,7 +727,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
                 size=(900, None)
             ).set_position(('center', 1650)).set_duration(duracion)
             
-            # Combinar imagen + subtítulo
             video_clip = CompositeVideoClip([video_clip, txt_clip])
         except Exception as e:
             print(f"⚠️ Error en subtítulo {i}: {e}")
@@ -757,7 +740,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
             silencio = AudioClip(lambda t: 0, duration=duracion)
             clips_audio.append(silencio)
     
-    # Concatenar audio con pausas
     PAUSA = 0.3
     audio_final_parts = []
     for i, aud in enumerate(clips_audio):
@@ -791,7 +773,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     video.close()
     audio_final.close()
     
-    # Limpiar temporales
     for f in os.listdir("."):
         if f.startswith("temp_cap_") and f.endswith(".jpg"):
             try: os.remove(f)
@@ -806,9 +787,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
 # 🖼️ GENERAR MINIATURA PERSONALIZADA (1280x720 con texto)
 # ================================================================
 def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.jpg"):
-    """Crea una miniatura horizontal 16:9 con texto grande superpuesto."""
     try:
-        # Descargar imagen
         if imagen_url.startswith("http"):
             r = requests.get(imagen_url, timeout=30)
             r.raise_for_status()
@@ -818,14 +797,10 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.j
         else:
             img_path = imagen_url
         
-        # Redimensionar a 1280x720
         img = Image.open(img_path)
         img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
-        
-        # Agregar texto
         draw = ImageDraw.Draw(img)
         
-        # Intentar cargar fuente grande, si no existe usar default
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 120)
         except:
@@ -834,21 +809,17 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura.j
             except:
                 font = ImageFont.load_default()
         
-        # Texto en mayúsculas
         texto = texto_portada.upper().strip()
-        # Limitar a 3 palabras
         palabras = texto.split()
         if len(palabras) > 3:
             texto = ' '.join(palabras[:3])
         
-        # Calcular posición centrada (abajo)
         bbox = draw.textbbox((0, 0), texto, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
         x = (1280 - text_width) // 2
         y = 720 - text_height - 60
         
-        # Sombra para legibilidad
         sombra_offset = 4
         draw.text((x + sombra_offset, y + sombra_offset), texto, fill='black', font=font)
         draw.text((x, y), texto, fill='white', font=font)
@@ -911,7 +882,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
     
-    # Subir miniatura personalizada
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
@@ -965,8 +935,10 @@ def main():
     texto = guion["texto_completo"]
     tema = guion.get("tema_especifico", "")
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
+    
     palabras_texto = len(re.findall(r'\w+', texto))
-    print(f"📝 Texto: {palabras_texto} palabras")    print(f"📌 Tema: {tema}")
+    print(f"📝 Texto: {palabras_texto} palabras")
+    print(f"📌 Tema: {tema}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
@@ -977,11 +949,9 @@ def main():
         print("❌ Error generando recursos.")
         sys.exit(1)
     
-    # Montar video con subtítulos
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video generado: {video_path}")
     
-    # Crear miniatura personalizada
     miniatura_path = None
     if recursos and recursos[0].get("imagen_url"):
         miniatura_path = crear_miniatura_personalizada(
@@ -990,7 +960,6 @@ def main():
             "miniatura.jpg"
         )
     
-    # Subir a YouTube
     video_id = subir_a_youtube(
         video_path=video_path,
         titulo=guion["titulo"],
