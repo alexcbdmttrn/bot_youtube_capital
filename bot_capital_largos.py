@@ -16,6 +16,8 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
     AudioClip,
+    TextClip,
+    CompositeVideoClip,
 )
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import requests
@@ -40,13 +42,13 @@ META_DIARIA_LARGOS = 1
 DIAS_SIN_REPETIR_TEMA = 45
 
 # ================================================================
-# VOZ FIJA (Jorge) - +5% para largos
+# VOZ FIJA (Jorge) - ¡VELOCIDAD +10% como en Shorts!
 # ================================================================
-VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
+VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
-# PALETAS Y ESTILOS VISUALES (16:9)
+# PALETAS Y ESTILOS VISUALES (neón + alto contraste)
 # ================================================================
 PALETAS_BASE = [
     "Corporate blue and silver, modern office",
@@ -59,7 +61,7 @@ PALETA_BASE_ACTUAL = random.choice(PALETAS_BASE)
 
 COLORES_NEON = [
     "electric cyan neon glow", "neon magenta pulse", "vivid lime green neon",
-    "hot pink neon reflection", "neon orange highlight"
+    "hot pink neon reflection", "neon orange highlight", "electric purple neon aura"
 ]
 COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
 
@@ -190,7 +192,7 @@ def tema_ya_publicado(tema, dias=45):
     return False
 
 # ================================================================
-# GENERAR GUION LARGO
+# GENERAR GUION LARGO (con instrucciones de SEO y diseño visual mejorado)
 # ================================================================
 def generar_guion_largo(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -244,8 +246,9 @@ def generar_guion_largo(tipo):
     tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(temas_pool)
     print(f"📌 Tema seleccionado: {tema_elegido}")
 
+    # 🔥 PROMPT MEJORADO CON INSTRUCCIONES PARA IMÁGENES NEÓN Y MINIATURA
     prompt = f"""
-Eres un CREADOR DE CONTENIDO FINANCIERO EXPERTO para YouTube. Debes escribir un guion para un video de 7-8 minutos.
+Eres un CREADOR DE CONTENIDO FINANCIERO EXPERTO para YouTube y un DIRECTOR DE CINE. Debes escribir un guion para un video de 7-8 minutos.
 Tema: "{tema_elegido}"
 Tipo: {tipo}
 
@@ -257,35 +260,45 @@ Tipo: {tipo}
 [SOLUCION - 4:30] (Pasos prácticos, estrategias accionables)
 [CIERRE - 6:00] (Resumen + CTA "Suscríbete, dale like")
 
-🎯 REGLAS:
+🎯 REGLAS DE CONTENIDO:
 - Total: 1000-1200 palabras.
-- Tono coloquial, directo, como si hablaras con un amigo.
-- Incluye preguntas retóricas.
-- NO uses fechas específicas (evita que se desactualice rápido).
-- Al final del guion, asegúrate de que las secciones estén claras.
+- Tono coloquial, directo, con preguntas retóricas.
+- NO uses fechas específicas (evita desactualización).
 
-🎯 SEO:
-- Título (60-70 chars): [Emoji] + [Keyword] + [Gancho]
-- Descripción: Gancho, resumen, capítulos, CTA.
-- Keywords: 5 keywords principales.
-- Tags: 25-30 tags separados por coma.
+🎯 REGLAS DE SEO PARA MAXIMIZAR CTR:
+- Título (60-70 chars): **DEBE incluir un EMOJI + PALABRA CLAVE + GANCHO**.
+  Ej: "🔥 SHIBA INU: ¿Aún estás a tiempo de comprar?"
+- Descripción: Gancho, resumen, capítulos, CTA, hashtags.
+- Tags: 25-30 tags (alto volumen + nicho).
+- Palabras clave: 5 keywords principales.
 
-🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
-{titulos_referencia}
+🎯 INSTRUCCIONES PARA LAS IMÁGENES (CADA SEGMENTO):
+Para cada segmento, genera un prompt en INGLÉS para Agnes que incluya:
+- Estilo: cinematográfico, hiperrealista, 8k.
+- Colores: neón (cyan, magenta, naranja, verde lima) combinados con fondos oscuros o corporativos.
+- Composición: gran angular o plano medio, NUNCA primer plano de rostros.
+- Ambiente: oficinas modernas, pantallas de trading, gráficos financieros, edificios, personas en segundo plano (pequeñas).
+- Acentos de luz: "electric neon glow", "dramatic lighting", "high contrast".
+- Época: actual o ligeramente futurista (2026).
+- Prohibido: texto, marcas de agua, gore, clones.
 
-RESPONDE EN JSON:
+🎯 INSTRUCCIÓN PARA LA MINIATURA (se generará al final):
+Crea una miniatura de alto CTR: texto grande, colores neón sobre fondo oscuro, imagen de impacto (ej. Bitcoin, gráfico, persona emocionada).
+
+📤 RESPUESTA EN JSON:
 {{
-    "titulo": "Título",
+    "titulo": "Título con emoji y keyword",
     "titulo_alternativo": "Título alternativo",
     "palabras_clave": ["kw1", "kw2", "kw3", "kw4", "kw5"],
-    "descripcion": "Descripción completa con capítulos",
+    "descripcion": "Descripción completa (incluye capítulos y hashtags)",
     "tags": "tag1, tag2, tag3...",
     "hashtags": "#hashtag1 #hashtag2",
     "guion": "Texto completo con timestamps",
     "segmentos": [
         {{"texto": "Parte 1 (45-50 palabras)", "prompt_imagen": "Prompt en inglés para Agnes"}},
         ...
-    ]
+    ],
+    "palabras_portada": "2-3 palabras para la miniatura (ej. 'BITCOIN', 'SHIBA', 'ALERTA')"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -294,37 +307,40 @@ RESPONDE EN JSON:
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 2500,
+        "max_tokens": 2800,
         "response_format": {"type": "json_object"}
     }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=120)
-        r.raise_for_status()
-        data = r.json()
-        content = data["choices"][0]["message"]["content"]
-        inicio = content.find("{")
-        fin = content.rfind("}")
-        json_str = content[inicio:fin+1]
-        result = json.loads(json_str)
-        return result, tema_elegido
-    except Exception as e:
-        print(f"❌ Error generando guion: {e}")
-        sys.exit(1)
+    for intento in range(3):
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=120)
+            r.raise_for_status()
+            data = r.json()
+            content = data["choices"][0]["message"]["content"]
+            inicio = content.find("{")
+            fin = content.rfind("}")
+            json_str = content[inicio:fin+1]
+            result = json.loads(json_str)
+            return result, tema_elegido
+        except Exception as e:
+            print(f"❌ Intento {intento+1}/3 falló: {e}")
+            time.sleep(10)
+    print("❌ Error generando guion")
+    sys.exit(1)
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL (16:9)
+# GENERAR IMAGEN HORIZONTAL (16:9) CON ESTILO NEÓN
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
-    prompt = re.sub(r"\n+", " ", prompt).strip()
-    prompt = re.sub(r'"', "'", prompt)
-    prompt = prompt[:950]
+    # Añadir instrucciones de estilo al prompt
+    prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, {COLOR_NEON_ACTUAL}, high contrast, sharp focus, wide shot, environment as main subject, no close-up face, no text, no watermark"
+    prompt_completo = prompt_completo[:950]
     
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
-    negative = "multiple people, crowd, close-up face, portrait, headshot, gore, blood, clones, deformed, blurry, text, watermark"
+    negative = "multiple people, crowd, close-up face, portrait, headshot, gore, blood, clones, deformed, blurry, text, watermark, low quality"
     payload = {
         "model": "agnes-image-2.1-flash",
-        "prompt": prompt,
+        "prompt": prompt_completo,
         "negative_prompt": negative,
         "width": 1280,
         "height": 720,
@@ -348,30 +364,116 @@ def generar_imagen_horizontal(prompt, intentos=3):
     return None
 
 # ================================================================
-# SUBTÍTULOS CON PIL (16:9)
+# GENERAR MINIATURA PERSONALIZADA (alto CTR)
+# ================================================================
+def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_largo.jpg"):
+    try:
+        # Descargar imagen de referencia (puede ser una de las imágenes del video)
+        if imagen_url.startswith("http"):
+            r = requests.get(imagen_url, timeout=30)
+            r.raise_for_status()
+            img_path = "temp_thumb.jpg"
+            with open(img_path, "wb") as f:
+                f.write(r.content)
+        else:
+            img_path = imagen_url
+        
+        # Redimensionar a 1280x720 (16:9)
+        img = Image.open(img_path)
+        img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
+        draw = ImageDraw.Draw(img)
+        
+        # Cargar fuente grande
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 140)
+        except:
+            try:
+                font = ImageFont.truetype("arial.ttf", 140)
+            except:
+                font = ImageFont.load_default()
+        
+        texto = texto_portada.upper().strip()
+        # Limitar a 3 palabras
+        palabras = texto.split()
+        if len(palabras) > 3:
+            texto = ' '.join(palabras[:3])
+        
+        # Calcular posición centrada (ligeramente abajo)
+        bbox = draw.textbbox((0, 0), texto, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = (1280 - text_width) // 2
+        y = 720 - text_height - 80
+        
+        # Sombra para legibilidad (negra, gruesa)
+        sombra_offset = 6
+        draw.text((x + sombra_offset, y + sombra_offset), texto, fill='black', font=font)
+        # Texto principal en color neón o blanco
+        draw.text((x, y), texto, fill='white', font=font)
+        
+        # Añadir un rectángulo semitransparente detrás del texto para mejor contraste
+        # (opcional, pero ayuda)
+        overlay = Image.new('RGBA', (text_width + 40, text_height + 40), (0, 0, 0, 128))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle([(0, 0), (text_width + 40, text_height + 40)], fill=(0, 0, 0, 128))
+        img.paste(overlay, (x - 20, y - 20), overlay)
+        # Volver a dibujar el texto encima
+        draw.text((x, y), texto, fill='white', font=font)
+        
+        img.save(salida)
+        print(f"✅ Miniatura personalizada creada: {salida}")
+        return salida
+    except Exception as e:
+        print(f"⚠️ Error creando miniatura: {e}")
+        return None
+
+# ================================================================
+# SUBTÍTULOS CON PIL (16:9) - MEJORADOS
 # ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 55)
         except:
-            font = ImageFont.load_default()
+            try:
+                font = ImageFont.truetype("arial.ttf", 55)
+            except:
+                font = ImageFont.load_default()
         
+        # Limitar texto a 20 palabras
         palabras = texto.split()
         if len(palabras) > 20:
             texto_sub = ' '.join(palabras[:20])
         else:
             texto_sub = texto
         
-        bbox = draw.textbbox((0, 0), texto_sub, font=font)
-        ancho = bbox[2] - bbox[0]
-        x = (1280 - ancho) // 2
-        y = 720 - 100
+        # Dividir en 2 líneas si es largo
+        if len(texto_sub) > 60:
+            mitad = len(texto_sub) // 2
+            espacio = texto_sub.find(' ', mitad - 10)
+            if espacio == -1:
+                espacio = mitad
+            linea1 = texto_sub[:espacio]
+            linea2 = texto_sub[espacio+1:]
+            lineas = [linea1, linea2]
+        else:
+            lineas = [texto_sub]
         
-        draw.text((x+2, y+2), texto_sub, fill='black', font=font)
-        draw.text((x, y), texto_sub, fill='white', font=font)
+        # Calcular posición (centrado abajo)
+        y_base = 720 - 120 - (len(lineas) - 1) * 60
+        for i, linea in enumerate(lineas):
+            bbox = draw.textbbox((0, 0), linea, font=font)
+            ancho = bbox[2] - bbox[0]
+            x = (1280 - ancho) // 2
+            y = y_base + i * 65
+            
+            # Fondo semitransparente para legibilidad (opcional)
+            # En lugar de fondo, usamos sombra gruesa
+            draw.text((x+3, y+3), linea, fill='black', font=font)
+            draw.text((x+1, y+1), linea, fill='black', font=font)
+            draw.text((x, y), linea, fill='white', font=font)
         
         img.save(salida_path)
         return salida_path
@@ -380,7 +482,7 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# GENERAR AUDIO
+# GENERAR AUDIO (VOZ +10%)
 # ================================================================
 def generar_audio(texto, index):
     global CONFIG_VOZ_ACTUAL
@@ -404,7 +506,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO (incluye CTA visual final)
 # ================================================================
 def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
     if not recursos:
@@ -452,6 +554,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
             silencio = AudioClip(lambda t: 0, duration=duracion)
             clips_audio.append(silencio)
     
+    # Concatenar audio con pausas
     PAUSA = 0.2
     audio_final_parts = []
     for i, aud in enumerate(clips_audio):
@@ -465,6 +568,32 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
+    # Agregar CTA visual final (SUSCRÍBETE)
+    try:
+        # Crear un clip de texto de 3 segundos al final
+        cta_text = TextClip(
+            "🔴 SUSCRÍBETE",
+            fontsize=100,
+            color='red',
+            font='Arial-Bold',
+            stroke_color='white',
+            stroke_width=4,
+            method='caption',
+            size=(1280, None)
+        ).set_position('center').set_duration(3)
+        
+        # Fondo oscuro para el CTA
+        cta_fondo = ImageClip(np.zeros((720, 1280, 3), dtype=np.uint8) + 20, duration=3).set_fps(24)
+        cta_fondo = cta_fondo.set_audio(AudioClip(lambda t: 0, duration=3))  # Silencio
+        cta_final = CompositeVideoClip([cta_fondo, cta_text])
+        
+        # Añadir al final del video
+        video = concatenate_videoclips([video, cta_final], method="compose")
+        duracion_total += 3
+    except Exception as e:
+        print(f"⚠️ No se pudo agregar CTA visual: {e}")
+    
+    # Fondo musical
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -483,9 +612,9 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (CON MINIATURA PERSONALIZADA)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, descripcion):
+def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=None):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -517,6 +646,16 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion):
     response = request.execute()
     video_id = response["id"]
     print(f"✅ Video largo subido: https://youtu.be/{video_id}")
+    
+    # Subir miniatura personalizada
+    if miniatura_path and os.path.exists(miniatura_path):
+        try:
+            media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
+            youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
+            print("✅ Miniatura personalizada subida exitosamente")
+        except Exception as e:
+            print(f"⚠️ Error subiendo miniatura: {e}")
+    
     return video_id
 
 # ================================================================
@@ -524,10 +663,13 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion):
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (7+ min)")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (MEJORADO)")
     print("   ✓ Formato 16:9 Horizontal")
-    print("   ✓ Guion de 1000-1200 palabras")
-    print("   ✓ Voz Jorge +5%")
+    print("   ✓ Velocidad voz +10% (como Shorts)")
+    print("   ✓ Imágenes con neón y alto contraste")
+    print("   ✓ Miniatura personalizada de alto CTR")
+    print("   ✓ Subtítulos grandes y legibles")
+    print("   ✓ CTA visual final")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -551,6 +693,7 @@ def main():
     descripcion = guion["descripcion"]
     tags = guion["tags"]
     segmentos = guion["segmentos"]
+    palabras_portada = guion.get("palabras_portada", "RÉCORD")
     
     recursos = []
     for idx, seg in enumerate(segmentos):
@@ -584,7 +727,16 @@ def main():
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4")
     print(f"🎬 Video montado: {video_path}")
     
-    video_id = subir_a_youtube(video_path, titulo, tags, descripcion)
+    # Crear miniatura personalizada usando la primera imagen del video
+    miniatura_path = None
+    if recursos and recursos[0].get("imagen_url"):
+        miniatura_path = crear_miniatura_personalizada(
+            recursos[0]["imagen_url"],
+            palabras_portada,
+            "miniatura_largo.jpg"
+        )
+    
+    video_id = subir_a_youtube(video_path, titulo, tags, descripcion, miniatura_path)
     
     guardar_titulo_publicado(titulo)
     guardar_tema_publicado(tema, tipo)
@@ -594,4 +746,10 @@ def main():
     print(f"✅ Publicado: https://youtu.be/{video_id}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"❌ Error fatal: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
