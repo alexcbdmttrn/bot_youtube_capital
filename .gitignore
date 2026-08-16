@@ -1,0 +1,21 @@
+# Archivos temporales del bot
+*.mp3
+*.mp4
+*.jpg
+*.jpeg
+temp_*
+placeholder_*
+audio_*
+short_capital.mp4
+miniatura.jpg
+
+# Archivos de estado (si quieres guardarlos, quita la línea)
+# estado_capital_shorts.json
+# titulos_capital_shorts_publicados.json
+# temas_publicados.json
+
+# Entornos virtuales
+venv/
+.env
+__pycache__/
+*.pyc
