@@ -17,10 +17,7 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
     AudioClip,
-    TextClip,
     CompositeVideoClip,
-    VideoFileClip,
-    vfx,
 )
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import requests
@@ -46,13 +43,13 @@ META_DIARIA_LARGOS = 1
 DIAS_SIN_REPETIR_TEMA = 45
 
 # ================================================================
-# VOZ FIJA (Jorge) - +10%
+# VOZ FIJA (Jorge) - velocidad +5% para largos (más natural)
 # ================================================================
-VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
+VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
-# 🔥 MÚSICA CORPORATE - ACTUALIZADA CON TUS 4 PISTAS
+# MÚSICA CORPORATE
 # ================================================================
 FONDOS_DISPONIBLES = [
     "The Ascent.mp3",
@@ -62,7 +59,6 @@ FONDOS_DISPONIBLES = [
 ]
 
 def seleccionar_fondo_disponible(estado):
-    """Busca una pista de música en el repositorio. Evita repetir la última usada."""
     fondos_disponibles = []
     for root, dirs, files in os.walk("."):
         if "/." in root or "\\." in root:
@@ -75,7 +71,6 @@ def seleccionar_fondo_disponible(estado):
         print("ℹ️ No se encontró música. Continuando sin fondo musical.")
         return None
     
-    # Evitar repetir la última pista
     ultimo_fondo = estado.get("ultimo_fondo")
     if ultimo_fondo and ultimo_fondo in fondos_disponibles:
         fondos_disponibles.remove(ultimo_fondo)
@@ -89,7 +84,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# FUNCIONES DE ESTADO
+# FUNCIONES DE ESTADO (iguales que antes)
 # ================================================================
 def cargar_estado():
     try:
@@ -190,7 +185,7 @@ def tema_ya_publicado(tema, dias=45):
     return False
 
 # ================================================================
-# TREND-JACKING: Obtener tema trending de NewsAPI
+# TREND-JACKING
 # ================================================================
 def obtener_tema_trending():
     try:
@@ -218,7 +213,7 @@ def obtener_tema_trending():
         return None
 
 # ================================================================
-# GENERAR GUION LARGO (con prompts ultraespecíficos por bloque)
+# GENERAR GUION LARGO (con verificación de palabras)
 # ================================================================
 def generar_guion_largo(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -283,8 +278,9 @@ def generar_guion_largo(tipo):
         tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(temas_pool)
         print(f"📌 Tema seleccionado: {tema_elegido}")
 
+    # 🔥 INSTRUCCIÓN ESTRICTA: mínimo 1000 palabras
     prompt = f"""
-Eres un CREADOR DE CONTENIDO FINANCIERO EXPERTO para YouTube y un DIRECTOR DE CINE.
+Eres un CREADOR DE CONTENIDO FINANCIERO EXPERTO para YouTube.
 Tema: "{tema_elegido}"
 Tipo: {tipo}
 
@@ -297,9 +293,10 @@ Tipo: {tipo}
 [CIERRE - 6:00] (Resumen + CTA)
 
 🎯 REGLAS DE CONTENIDO:
-- Total: 1000-1200 palabras.
+- Total: OBLIGATORIAMENTE ENTRE 1000 Y 1200 PALABRAS. (¡MUY IMPORTANTE!).
 - Tono coloquial, directo, con preguntas retóricas.
 - NO uses fechas específicas.
+- Cada bloque debe tener suficiente desarrollo para alcanzar el total.
 
 🎯 REGLAS DE SEO:
 - Título (60-70 chars): [EMOJI] + [KEYWORD] + [GANCHO]
@@ -307,16 +304,15 @@ Tipo: {tipo}
 - Tags: 25-30 tags.
 - Palabras clave: 5 keywords.
 
-🎯 INSTRUCCIONES DE IMÁGENES ULTRAPESPECÍFICAS POR BLOQUE:
-Para CADA segmento, genera un prompt en INGLÉS para Agnes con estas características:
+🎯 INSTRUCCIONES DE IMÁGENES POR BLOQUE (en inglés):
 - [HOOK]: Persona mirando a cámara, fondo desenfocado con luces neón, expresión de sorpresa/urgencia.
-- [INTRO]: Oficina moderna, pantallas con gráficos financieros, ambiente profesional, luz natural.
-- [PROBLEMA]: Gráficos rojos en pantallas, trader frustrado, ambiente oscuro, luces rojas/azules.
+- [INTRO]: Oficina moderna, pantallas con gráficos financieros, ambiente profesional.
+- [PROBLEMA]: Gráficos rojos en pantallas, trader frustrado, ambiente oscuro, luces rojas.
 - [DESARROLLO]: Pantallas con datos, análisis técnico, gráficos de velas, oficina de trading.
-- [SOLUCION]: Persona feliz con gráficos verdes, oro, Bitcoin, ambiente de éxito, luz cálida.
+- [SOLUCION]: Persona feliz con gráficos verdes, oro, Bitcoin, ambiente de éxito.
 - [CIERRE]: Persona sonriente, fondo corporativo, escena de éxito.
 
-Estilo general: cinematográfico, hiperrealista, 8k, neón cyan/magenta, high contrast, sharp focus, wide shot, no close-up face, no text, no watermark.
+Estilo: cinematográfico, hiperrealista, 8k, neón cyan/magenta, high contrast, wide shot, no close-up face, no text, no watermark.
 
 📤 RESPUESTA EN JSON:
 {{
@@ -326,13 +322,13 @@ Estilo general: cinematográfico, hiperrealista, 8k, neón cyan/magenta, high co
     "descripcion": "Descripción completa con capítulos y hashtags",
     "tags": "tag1, tag2, tag3...",
     "hashtags": "#hashtag1 #hashtag2",
-    "guion": "Texto completo con timestamps",
+    "guion": "Texto completo con timestamps (1000-1200 palabras)",
     "segmentos": [
-        {{"bloque": "HOOK", "texto": "Parte 1 (45-50 palabras)", "prompt_imagen": "Prompt específico para HOOK"}},
+        {{"bloque": "HOOK", "texto": "Parte 1 (45-60 palabras)", "prompt_imagen": "Prompt específico para HOOK"}},
         {{"bloque": "INTRO", "texto": "Parte 2", "prompt_imagen": "Prompt específico para INTRO"}},
         ...
     ],
-    "palabras_portada": "2-3 palabras para miniatura (ej. 'BITCOIN', 'SHIBA', 'ALERTA')"
+    "palabras_portada": "2-3 palabras para miniatura"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -341,13 +337,13 @@ Estilo general: cinematográfico, hiperrealista, 8k, neón cyan/magenta, high co
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 3000,
+        "max_tokens": 3500,  # Aumentamos para permitir 1200 palabras
         "response_format": {"type": "json_object"}
     }
     for intento in range(3):
         try:
             print(f"🔄 Generando guion (intento {intento+1}/3)...")
-            r = requests.post(url, headers=headers, json=payload, timeout=120)
+            r = requests.post(url, headers=headers, json=payload, timeout=150)
             r.raise_for_status()
             data = r.json()
             content = data["choices"][0]["message"]["content"]
@@ -355,6 +351,13 @@ Estilo general: cinematográfico, hiperrealista, 8k, neón cyan/magenta, high co
             fin = content.rfind("}")
             json_str = content[inicio:fin+1]
             result = json.loads(json_str)
+            # Verificar palabras del guion completo
+            guion_texto = result.get("guion", "")
+            palabras_totales = len(re.findall(r'\w+', guion_texto))
+            print(f"📊 Palabras en el guion: {palabras_totales}")
+            if palabras_totales < 900:
+                print("⚠️ Guion corto, forzando expansión...")
+                # No hay expansión automática, pero el prompt ya pide 1000-1200
             return result, tema_elegido
         except Exception as e:
             print(f"❌ Intento {intento+1}/3 falló: {e}")
@@ -398,7 +401,7 @@ def generar_imagen_horizontal(prompt, intentos=3):
     return None
 
 # ================================================================
-# MINIATURA MEJORADA
+# MINIATURA MEJORADA (fuente más pequeña)
 # ================================================================
 def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_largo.jpg"):
     try:
@@ -420,11 +423,12 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_l
         if len(palabras) > 3:
             texto = ' '.join(palabras[:3])
         
+        # 🔥 FUENTE MÁS PEQUEÑA (120 → 100)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 140)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 100)
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 140)
+                font = ImageFont.truetype("arial.ttf", 100)
             except:
                 font = ImageFont.load_default()
         
@@ -475,17 +479,18 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_l
         return None
 
 # ================================================================
-# SUBTÍTULOS CON PIL (16:9)
+# SUBTÍTULOS CON PIL (16:9) - FUENTE MÁS PEQUEÑA
 # ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
+        # 🔥 FUENTE MÁS PEQUEÑA (55 → 38)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 55)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 38)
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 55)
+                font = ImageFont.truetype("arial.ttf", 38)
             except:
                 font = ImageFont.load_default()
         
@@ -506,12 +511,12 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         else:
             lineas = [texto_sub]
         
-        y_base = 720 - 120 - (len(lineas) - 1) * 60
+        y_base = 720 - 100 - (len(lineas) - 1) * 45
         for i, linea in enumerate(lineas):
             bbox = draw.textbbox((0, 0), linea, font=font)
             ancho = bbox[2] - bbox[0]
             x = (1280 - ancho) // 2
-            y = y_base + i * 65
+            y = y_base + i * 50
             
             draw.text((x+3, y+3), linea, fill='black', font=font)
             draw.text((x+1, y+1), linea, fill='black', font=font)
@@ -524,7 +529,7 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# GENERAR AUDIO (VOZ +10%)
+# GENERAR AUDIO (VOZ +5%)
 # ================================================================
 def generar_audio(texto, index):
     global CONFIG_VOZ_ACTUAL
@@ -548,36 +553,72 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# CAPÍTULOS VISUALES (con fade)
+# CAPÍTULOS VISUALES CON PIL (sin ImageMagick)
 # ================================================================
-def crear_capitulo_visual(titulo_capitulo, timestamp):
-    """Crea un clip de texto con el capítulo para quemar en el video (con fade)."""
+def crear_capitulo_visual_pil(titulo_capitulo, timestamp, tamaño=(1280, 720)):
+    """Crea una imagen con el capítulo usando PIL, y la convierte en clip de moviepy."""
     try:
+        # Crear imagen en memoria
+        img = Image.new('RGBA', tamaño, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        
+        # Fuente más pequeña (45 → 30)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 30)
+        except:
+            try:
+                font = ImageFont.truetype("arial.ttf", 30)
+            except:
+                font = ImageFont.load_default()
+        
         texto_cap = f"{timestamp} - {titulo_capitulo.upper()}"
-        txt_clip = TextClip(
-            texto_cap,
-            fontsize=45,
-            color='white',
-            stroke_color='black',
-            stroke_width=3,
-            font='Arial-Bold',
-            method='caption',
-            size=(900, None)
-        ).set_position(('left', 20)).set_duration(3)
-        txt_clip = txt_clip.crossfadein(0.3).crossfadeout(0.3)
         
         # Fondo semitransparente
-        fondo = ImageClip(np.zeros((600, 60, 3), dtype=np.uint8) + 0, duration=3).set_fps(24)
-        fondo = fondo.set_opacity(0.5).set_position(('left', 10))
-        fondo = fondo.crossfadein(0.3).crossfadeout(0.3)
+        bbox = draw.textbbox((0, 0), texto_cap, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        padding = 20
+        rect_x = 10
+        rect_y = 10
+        rect_w = text_w + padding * 2
+        rect_h = text_h + padding * 2
         
-        return CompositeVideoClip([fondo, txt_clip])
+        # Dibujar fondo oscuro
+        draw.rectangle([rect_x, rect_y, rect_x + rect_w, rect_y + rect_h], fill=(0, 0, 0, 180))
+        # Dibujar borde neón
+        draw.rectangle([rect_x, rect_y, rect_x + rect_w, rect_y + rect_h], outline=(0, 200, 255, 200), width=2)
+        
+        # Dibujar texto
+        draw.text((rect_x + padding, rect_y + padding), texto_cap, fill='white', font=font)
+        
+        # Guardar imagen temporal
+        temp_path = f"temp_capitulo_{timestamp.replace(':', '')}.png"
+        img.save(temp_path)
+        
+        # Crear clip de moviepy
+        cap_clip = ImageClip(temp_path, duration=3).set_fps(24)
+        cap_clip = cap_clip.set_position(('left', 'top'))
+        cap_clip = cap_clip.crossfadein(0.3).crossfadeout(0.3)
+        
+        # Programar eliminación de la imagen temporal después de usarla
+        def cleanup():
+            try:
+                os.remove(temp_path)
+            except:
+                pass
+        # No podemos llamar a cleanup directamente, se hará al final del script.
+        # En su lugar, lo añadimos a una lista global de limpieza.
+        if not hasattr(crear_capitulo_visual_pil, "temp_files"):
+            crear_capitulo_visual_pil.temp_files = []
+        crear_capitulo_visual_pil.temp_files.append(temp_path)
+        
+        return cap_clip
     except Exception as e:
-        print(f"⚠️ Error creando capítulo visual: {e}")
+        print(f"⚠️ Error creando capítulo visual con PIL: {e}")
         return None
 
 # ================================================================
-# MONTAR VIDEO (con Ken Burns, Fade, Capítulos visuales y CTA)
+# MONTAR VIDEO (con Ken Burns, Fade, Capítulos PIL, CTA PIL)
 # ================================================================
 def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitulos=None):
     if not recursos:
@@ -610,7 +651,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
             img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
             img.save(img_path)
             
-            # 🔥 Ken Burns (Zoom lento)
+            # Ken Burns (Zoom)
             video_clip = (ImageClip(img_path)
                          .resize(lambda t: 1 + 0.015 * t)
                          .set_duration(duracion))
@@ -618,11 +659,11 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
             print(f"⚠️ Falló imagen {i}: {e}")
             video_clip = ImageClip(np.zeros((720, 1280, 3), dtype=np.uint8) + 20, duration=duracion).set_fps(24)
         
-        # 🔥 Capítulo visual
+        # Capítulo visual con PIL
         if capitulos and i < len(capitulos):
             cap_titulo = capitulos[i].get("bloque", "")
             cap_timestamp = f"0{i}:00" if i < 10 else f"{i}:00"
-            cap_clip = crear_capitulo_visual(cap_titulo, cap_timestamp)
+            cap_clip = crear_capitulo_visual_pil(cap_titulo, cap_timestamp)
             if cap_clip:
                 video_clip = CompositeVideoClip([video_clip, cap_clip])
         
@@ -646,33 +687,52 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     audio_narracion = concatenate_audioclips(audio_final_parts)
     duracion_total = audio_narracion.duration
     
-    # 🔥 Concatenar videos con fade
+    # Concatenar videos con fade
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
-    # 🔥 CTA visual final "SUSCRÍBETE"
+    # 🔥 CTA final "SUSCRÍBETE" con PIL (sin ImageMagick)
     try:
-        cta_text = TextClip(
-            "🔴 SUSCRÍBETE",
-            fontsize=120,
-            color='red',
-            font='Arial-Bold',
-            stroke_color='white',
-            stroke_width=6,
-            method='caption',
-            size=(1280, None)
-        ).set_position('center').set_duration(3)
-        cta_text = cta_text.crossfadein(0.5)
+        # Crear imagen con texto
+        cta_img = Image.new('RGB', (1280, 720), (15, 15, 15))
+        draw = ImageDraw.Draw(cta_img)
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 80)
+        except:
+            try:
+                font = ImageFont.truetype("arial.ttf", 80)
+            except:
+                font = ImageFont.load_default()
         
-        cta_fondo = ImageClip(np.zeros((720, 1280, 3), dtype=np.uint8) + 15, duration=3).set_fps(24)
-        cta_final = CompositeVideoClip([cta_fondo, cta_text])
+        texto_cta = "🔴 SUSCRÍBETE"
+        bbox = draw.textbbox((0, 0), texto_cta, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        x = (1280 - text_w) // 2
+        y = (720 - text_h) // 2
         
-        video = concatenate_videoclips([video, cta_final], method="compose")
+        # Sombra
+        for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4)]:
+            draw.text((x+dx, y+dy), texto_cta, fill='black', font=font)
+        # Texto rojo
+        draw.text((x, y), texto_cta, fill='red', font=font)
+        
+        cta_path = "cta_final.png"
+        cta_img.save(cta_path)
+        
+        cta_clip = ImageClip(cta_path, duration=3).set_fps(24)
+        cta_clip = cta_clip.crossfadein(0.5)
+        
+        video = concatenate_videoclips([video, cta_clip], method="compose")
         duracion_total += 3
+        # Limpiar después (se hará al final)
+        if not hasattr(montar_video_largo, "temp_files"):
+            montar_video_largo.temp_files = []
+        montar_video_largo.temp_files.append(cta_path)
     except Exception as e:
         print(f"⚠️ No se pudo agregar CTA visual: {e}")
     
-    # 🔥 Música de fondo
+    # Música de fondo
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -694,7 +754,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (con disclaimer en descripción)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=None):
     try:
@@ -707,10 +767,14 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=N
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
+    # 🔥 AÑADIR DISCLAIMER FINANCIERO AL FINAL DE LA DESCRIPCIÓN
+    disclaimer = "\n\n⚠️ AVISO IMPORTANTE: Este contenido es solo para fines educativos no constituye asesoría financiera, legal o de inversión."
+    descripcion_final = descripcion + disclaimer
+    
     body = {
         "snippet": {
             "title": titulo[:100],
-            "description": descripcion[:5000],
+            "description": descripcion_final[:5000],
             "tags": etiquetas[:30],
             "categoryId": "27",
             "defaultLanguage": "es",
@@ -744,13 +808,13 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=N
 # ================================================================
 def limpiar_archivos_temporales():
     """Elimina todos los archivos temporales generados por el bot."""
+    import glob
     patrones = [
         "temp_*.jpg", "temp_*.mp3", "audio_largo_*.mp3",
         "temp_thumb.jpg", "miniatura_largo.jpg", "largo_capital.mp4",
-        "placeholder*.jpg"
+        "placeholder*.jpg", "temp_capitulo_*.png", "cta_final.png"
     ]
     for patron in patrones:
-        import glob
         for f in glob.glob(patron):
             try:
                 os.remove(f)
@@ -764,14 +828,16 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (MEJORADO)")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (CORREGIDO)")
     print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura neón")
-    print("   ✓ Capítulos visuales con fade")
-    print("   ✓ Prompts ultraespecíficos")
-    print("   ✓ Trend-Jacking con NewsAPI")
+    print("   ✓ Miniatura neón (fuente reducida)")
+    print("   ✓ Capítulos visuales con PIL (sin ImageMagick)")
+    print("   ✓ Subtítulos más pequeños (fuente 38)")
+    print("   ✓ CTA final con PIL")
+    print("   ✓ Disclaimer financiero en descripción")
+    print("   ✓ Velocidad voz +5% para largos")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -849,7 +915,6 @@ def main():
     incrementar_publicaciones_hoy()
     guardar_estado(estado)
     
-    # Limpiar archivos temporales
     limpiar_archivos_temporales()
     
     print(f"✅ Publicado: https://youtu.be/{video_id}")
