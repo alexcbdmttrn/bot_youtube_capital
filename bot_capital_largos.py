@@ -545,14 +545,17 @@ def crear_miniatura_personalizada(imagenes_disponibles, texto_portada, salida="m
         return None
 
 # ================================================================
-# SUBTÍTULOS CON PIL (16:9) - TAMAÑO REDUCIDO (28px)
+# SUBTÍTULOS CON PIL (16:9) - TAMAÑO 28px
 # ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
+    """
+    Dibuja subtítulos sobre una imagen que YA DEBE ESTAR NORMALIZADA a 1280x720.
+    """
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)  # 🔥 REDUCIDO 50%
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
         except:
             try:
                 font = ImageFont.truetype("arial.ttf", 28)
@@ -617,7 +620,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# CAPÍTULOS VISUALES CON PIL (TAMAÑO REDUCIDO 14px)
+# CAPÍTULOS VISUALES CON PIL (TAMAÑO 14px)
 # ================================================================
 def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280, alto=720):
     try:
@@ -625,7 +628,7 @@ def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280
         draw = ImageDraw.Draw(img)
         texto = f"{timestamp} - {titulo_capitulo.upper()}"
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)  # 🔥 REDUCIDO 50%
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
         except:
             try:
                 font = ImageFont.truetype("arial.ttf", 14)
@@ -659,7 +662,7 @@ def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280
         return None
 
 # ================================================================
-# CTA FINAL "SUSCRÍBETE" CON PIL (TAMAÑO REDUCIDO 40px)
+# CTA FINAL "SUSCRÍBETE" CON PIL (TAMAÑO 40px)
 # ================================================================
 def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
     try:
@@ -667,7 +670,7 @@ def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
         draw = ImageDraw.Draw(img)
         texto = "🔴 SUSCRÍBETE"
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40)  # 🔥 REDUCIDO 50%
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40)
         except:
             try:
                 font = ImageFont.truetype("arial.ttf", 40)
@@ -691,7 +694,7 @@ def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
         return None
 
 # ================================================================
-# MONTAR VIDEO
+# MONTAR VIDEO (CON ORDEN CORREGIDO: normalizar → subtítulos)
 # ================================================================
 def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitulos=None):
     if not recursos:
@@ -717,12 +720,14 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
             else:
                 img_path = img_url
             
-            img_sub_path = f"temp_largo_sub_{i}.jpg"
-            img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
-            
+            # 🔥 PASO 1: Normalizar SIEMPRE a 1280x720 PRIMERO
             img = Image.open(img_path)
             img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
             img.save(img_path)
+            
+            # 🔥 PASO 2: Ahora agregar subtítulos sobre el lienzo ya normalizado
+            img_sub_path = f"temp_largo_sub_{i}.jpg"
+            img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
             
             # Ken Burns (Zoom lento)
             video_clip = (ImageClip(img_path)
@@ -864,13 +869,13 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (CORREGIDO)")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (VERSIÓN DEFINITIVA)")
     print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura neón (sin personas)")
+    print("   ✓ Miniatura neón (sin personas, variada)")
     print("   ✓ Capítulos visuales con PIL (14px)")
-    print("   ✓ Subtítulos con PIL (28px)")
+    print("   ✓ Subtítulos con PIL (28px) - ORDEN CORREGIDO")
     print("   ✓ CTA con PIL (40px)")
     print("   ✓ Disclaimer en descripción")
     print("   ✓ Expansión automática de guion si es corto")
@@ -937,7 +942,7 @@ def main():
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4", capitulos)
     print(f"🎬 Video montado: {video_path}")
     
-    # 🔥 Generar miniatura con variedad (evitando HOOK)
+    # Generar miniatura con variedad (evitando HOOK)
     imagenes_para_miniatura = [rec["imagen_url"] for rec in recursos if rec.get("imagen_url")]
     miniatura_path = None
     if imagenes_para_miniatura:
