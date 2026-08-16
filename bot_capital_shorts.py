@@ -965,8 +965,8 @@ def main():
     texto = guion["texto_completo"]
     tema = guion.get("tema_especifico", "")
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
-    print(f"📝 Texto: {len(re.findall(r'\w+', texto))} palabras")
-    print(f"📌 Tema: {tema}")
+    palabras_texto = len(re.findall(r'\w+', texto))
+    print(f"📝 Texto: {palabras_texto} palabras")    print(f"📌 Tema: {tema}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
