@@ -291,9 +291,6 @@ def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # ======================================================================
-    # 📌 NICHOS AMPLIADOS (30+ por categoría)
-    # ======================================================================
     NICHOS_EDUCATIVOS = [
         "Inversiones en criptomonedas", "Estrategias para ahorrar e invertir",
         "Conceptos básicos del mercado financiero", "Cómo funciona la bolsa de valores",
@@ -352,7 +349,7 @@ def generar_guion_financiero(tipo):
             tema_elegido = random.choice(NICHOS_EDUCATIVOS)
             print(f"⚠️ Todos los nichos educativos usados en los últimos {DIAS_SIN_REPETIR_TEMA} días. Forzando: {tema_elegido}")
     
-    else:  # estafa
+    else:
         temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         if temas_disponibles:
             tema_elegido = random.choice(temas_disponibles)
@@ -748,13 +745,13 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN DE IMÁGENES)
+# 🎬 GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
     total = len(segmentos)
-    last_successful_url = None  # 🔥 Para reutilizar si falla
-    
+    last_successful_url = None
+
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Segmento {idx+1}/{total} ({len(seg.split())} palabras)")
         etapa = etapas[idx] if idx < len(etapas) else "contexto_general"
@@ -772,28 +769,25 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             img_url = generar_imagen_vertical(prompt_img, intentos=1)
             if img_url:
                 print(f"    ✅ Imagen generada (intento {intento+1})")
-                last_successful_url = img_url  # Guardar la última exitosa
+                last_successful_url = img_url
                 break
             time.sleep(8)
         
-        # 🔥 Si falló, usar la última imagen exitosa (o la siguiente si es la primera)
         if not img_url:
             if last_successful_url:
-                print(f"    🔄 Reutilizando imagen anterior (falló la generación)")
+                print(f"    🔄 Reutilizando imagen anterior")
                 img_url = last_successful_url
             else:
-                # Si es el primer segmento y falla, esperar y reintentar
-                print(f"    ⚠️ No hay imagen previa. Reintentando una vez más...")
+                print(f"    ⚠️ No hay imagen previa. Reintentando...")
                 time.sleep(15)
                 img_url = generar_imagen_vertical(prompt_img, intentos=1)
                 if img_url:
                     last_successful_url = img_url
                 else:
-                    print(f"    ❌ Falló definitivamente, usando placeholder temporal")
+                    print(f"    ❌ Falló definitivamente, usando placeholder")
                     img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
                     last_successful_url = img_url
         
-        # Asegurar que siempre haya una URL
         if not img_url:
             img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
             last_successful_url = img_url
@@ -822,28 +816,36 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
     return recursos
 
 # ================================================================
-# 🎬 MONTAR VIDEO CON SUBTÍTULOS (PIL)
+# 🎬 SUBTÍTULOS CON PIL (VERSIÓN ROBUSTA)
 # ================================================================
 def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
         
+        # Intentar cargar fuente
+        font = None
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 45)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 50)
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 45)
+                font = ImageFont.truetype("arial.ttf", 50)
             except:
                 font = ImageFont.load_default()
+                print("   ⚠️ Usando fuente predeterminada para subtítulos")
         
+        if not texto:
+            return imagen_path
+        
+        # Limpiar y dividir texto
         palabras = texto.split()
         if len(palabras) > 14:
             texto_sub = ' '.join(palabras[:14])
         else:
             texto_sub = texto
         
-        if len(texto_sub) > 60:
+        # Dividir en 2 líneas si es largo
+        if len(texto_sub) > 50:
             mitad = len(texto_sub) // 2
             espacio = texto_sub.find(' ', mitad - 10)
             if espacio == -1:
@@ -854,23 +856,26 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         else:
             lineas = [texto_sub]
         
-        y_base = 1650
+        y_base = 1700
         for i, linea in enumerate(lineas):
             bbox = draw.textbbox((0, 0), linea, font=font)
             ancho = bbox[2] - bbox[0]
             x = (1080 - ancho) // 2
-            y = y_base + i * 50
+            y = y_base + i * 55
             
-            sombra_offset = 3
-            draw.text((x + sombra_offset, y + sombra_offset), linea, fill='black', font=font)
+            draw.text((x + 3, y + 3), linea, fill='black', font=font)
             draw.text((x, y), linea, fill='white', font=font)
         
         img.save(salida_path)
         return salida_path
+        
     except Exception as e:
-        print(f"⚠️ Error en subtítulos PIL: {e}")
+        print(f"⚠️ Error en subtítulos: {e}")
         return imagen_path
 
+# ================================================================
+# 🎬 MONTAR VIDEO
+# ================================================================
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
         raise ValueError("No hay recursos")
@@ -974,6 +979,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
+    # Descripción con disclaimer corto
     descripcion = f"""{gancho}
 
 {contexto}
@@ -984,7 +990,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
 
 {hashtags}
 
-⚠️ AVISO IMPORTANTE: Este contenido es solo para fines educativos y de entretenimiento. No constituye asesoría financiera, legal o de inversión. Siempre consulta con un profesional calificado antes de tomar decisiones financieras."""
+⚠️ AVISO IMPORTANTE: Este contenido es solo para fines educativos no constituye asesoría financiera, legal o de inversión."""
     
     body = {
         "snippet": {
@@ -1008,23 +1014,22 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
     
-    # 🔥 YA NO SUBIMOS MINIATURA PERSONALIZADA
     print("🖼️ YouTube seleccionará automáticamente la miniatura del video.")
     
     return video_id
 
 # ================================================================
-# 🎯 MAIN (CON ROTACIÓN FORZADA: 1 NOTICIA, 1 EDUCATIVO, 1 ESTAFA)
+# 🎯 MAIN
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de SHORTS (Versión DEFINITIVA)")
+    print("🎬 Capital Digital - Bot de SHORTS (Versión FINAL)")
     print("   ✓ Voz fija (Jorge)")
-    print("   ✓ SIN miniatura personalizada (YouTube elige)")
-    print("   ✓ Reutilización de imágenes si falla")
+    print("   ✓ Sin miniatura personalizada")
+    print("   ✓ Reutilización de imágenes")
     print("   ✓ 30+ temas por categoría")
     print("   ✓ Rotación forzada: Noticia → Educativo → Estafa")
-    print("   ✓ Subtítulos con PIL")
+    print("   ✓ Subtítulos con PIL (robusto)")
     print("   ✓ Pausas de 15s entre segmentos")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1040,12 +1045,11 @@ def main():
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
-    # 🔥 ROTACIÓN FORZADA según el número de publicaciones hoy
     if publicadas == 0:
         tipo = "noticia"
     elif publicadas == 1:
         tipo = "educativo"
-    else:  # publicadas == 2
+    else:
         tipo = "estafa"
     
     print(f"📌 Tipo: {tipo.upper()} (Short #{publicadas+1} del día)")
@@ -1055,7 +1059,6 @@ def main():
     
     guion, tema_elegido = generar_guion_financiero(tipo)
     texto = guion["texto_completo"]
-    palabras_portada = guion.get("palabras_portada", "RÉCORD")
     
     palabras_texto = len(re.findall(r'\w+', texto))
     print(f"📝 Texto: {palabras_texto} palabras")
@@ -1073,7 +1076,6 @@ def main():
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video generado: {video_path}")
     
-    # 🔥 YA NO CREAMOS MINIATURA
     print("🖼️ Usando miniatura automática de YouTube.")
     
     video_id = subir_a_youtube(
