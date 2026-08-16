@@ -46,12 +46,12 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add estado_capital_shorts.json titulos_capital_shorts_publicados.json
+          git add estado_capital_shorts.json titulos_capital_shorts_publicados.json temas_publicados.json 2>/dev/null || true
           if git diff-index --quiet HEAD; then
             echo "✅ No hay cambios en los estados"
           else
             git commit -m "Actualizar estado Capital Digital shorts [skip ci]"
-            git pull origin main --rebase
+            git pull --rebase --autostash origin main
             git push
           fi
         env:
