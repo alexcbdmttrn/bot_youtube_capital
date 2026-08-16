@@ -32,15 +32,15 @@ YOUTUBE_USER_TOKEN = (
     if os.getenv("YOUTUBE_USER_TOKEN_CAPITAL")
     else {}
 )
-FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # Cambia por tu página
-CANAL_LINK = "https://www.youtube.com/@CapitalDigital"      # Cambia por tu canal
+FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA ESTO
+CANAL_LINK = "https://www.youtube.com/@CapitalDigital"      # ⚠️ CAMBIA ESTO
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
-ACTIVAR_DISCLOSURE_IA = True  # 🔴 Activa el botón "Contenido generado con IA"
+ACTIVAR_DISCLOSURE_IA = True
 
 # ================================================================
-# VOCES PREMIUM (edge-tts) - Voces naturales en español
+# VOCES PREMIUM
 # ================================================================
 VOCES_DISPONIBLES = [
     {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"},
@@ -51,40 +51,38 @@ VOCES_DISPONIBLES = [
 CONFIG_VOZ_ACTUAL = random.choice(VOCES_DISPONIBLES)
 
 # ================================================================
-# PALETAS DE COLOR PREMIUM (look cinematográfico)
+# PALETAS Y ESTILOS VISUALES (con acentos neón según etapa)
 # ================================================================
-PALETAS_COLOR = [
-    "Corporate blue and silver, LED trading screens, clean white light, modern office atmosphere",
-    "Dark emerald green and gold, financial district at night, warm tungsten lighting, luxury banking decor",
-    "Slate gray and cyan, modern trading floor, glass reflections, cool professional lighting",
-    "Deep navy and amber, executive office, soft warm glow, mahogany and leather",
-    "Muted teal and white, minimalist fintech office, natural daylight, clean aesthetic",
-    "Crisp black and gold, Wall Street style, dramatic shadows, prestige atmosphere",
-    "Cool steel blue and silver, high-tech trading environment, digital displays, futuristic vibe",
+PALETAS_BASE = [
+    "Corporate blue and silver, modern office",
+    "Dark emerald and gold, financial district",
+    "Slate gray and cyan, trading floor",
+    "Deep navy and amber, executive office",
+    "Muted teal and white, fintech office",
+    "Black and gold, Wall Street style",
+    "Steel blue and silver, high-tech trading",
 ]
-PALETA_COLOR_ACTUAL = random.choice(PALETAS_COLOR)
+PALETA_BASE_ACTUAL = random.choice(PALETAS_BASE)
+
+# Colores neón para acentos
+COLORES_NEON = [
+    "electric cyan neon glow",
+    "neon magenta pulse",
+    "vivid lime green neon",
+    "hot pink neon reflection",
+    "neon orange highlight",
+    "electric purple neon aura",
+    "neon blue-white flash"
+]
+COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
 
 # ================================================================
-# ESTILOS VISUALES PREMIUM (calidad cinematográfica)
-# ================================================================
-ESTILOS_VISUALES = [
-    "Cinematic photograph, dramatic lighting, sharp focus, film still, 8k resolution, hyperrealistic",
-    "Documentary style, natural lighting, authentic textures, professional corporate aesthetic",
-    "High-end commercial photography, studio lighting, premium quality, clean composition",
-    "Financial magazine photography style, editorial quality, sophisticated atmosphere",
-    "Modern minimalist photography, clean lines, professional environment, natural tones",
-]
-ESTILO_VISUAL_ACTUAL = random.choice(ESTILOS_VISUALES)
-
-# ================================================================
-# MÚSICA DE FONDO (usa archivos .mp3 en la raíz del repositorio)
+# MÚSICA DE FONDO (opcional)
 # ================================================================
 FONDOS_DISPONIBLES = [
     "Ash and Marrow.mp3", "Black Maw.mp3", "Cold Hollow.mp3",
     "Hollow Marrow.mp3", "Sunken Dread.mp3", "Sunless Vault.mp3", "The Deep Rot.mp3"
 ]
-# 🔴 Recomendación: Sube archivos de música libre de derechos financiera/urbana.
-# Si no tienes, el bot funcionará igual sin música de fondo.
 
 def seleccionar_fondo_disponible(estado):
     fondos = FONDOS_DISPONIBLES.copy()
@@ -174,103 +172,102 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 # ================================================================
-# 🎯 GENERAR GUION FINANCIERO CON SEO PREMIUM
+# 🎯 GENERAR GUION CON SEO PREMIUM (títulos de 50-70 caracteres)
 # ================================================================
 def generar_guion_financiero(tipo):
-    """
-    tipo: 'noticia', 'educativo', 'estafa'
-    """
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    # Base de datos de temas financieros actuales para variedad
+    # Temas ampliados
     TEMAS_NOTICIAS = [
         "Bitcoin rompe nuevo máximo histórico", "Inflación en México y su impacto en ahorros",
         "Oro alcanza precio récord", "Bancos centrales compran oro", 
         "Nuevo exchange de criptomonedas", "Regulación de cripto en Latinoamérica",
         "ETF de Bitcoin aprobado", "Remesas con criptomonedas", "Banca digital en México",
-        "Seguros de vida con cripto", "Inversiones sostenibles"
+        "Seguros de vida con cripto", "Inversiones sostenibles", "Peso mexicano vs dólar",
+        "Nuevo presidente de la CNBV", "Fintech en México 2026", "Cripto como reserva de valor"
     ]
-    
     TEMAS_EDUCATIVOS = [
         "¿Cómo funciona un exchange de criptomonedas?", "¿Qué es el oro como inversión?",
         "¿Cómo proteger tus ahorros de la inflación?", "¿Qué son los ETFs?",
         "¿Cómo funcionan los seguros de vida?", "¿Qué es un swap en finanzas?",
         "¿Cómo invertir en bienes raíces?", "¿Qué es la diversificación?",
-        "¿Cómo funciona el mercado de acciones?", "¿Qué son las criptomonedas estables?"
+        "¿Cómo funciona el mercado de acciones?", "¿Qué son las criptomonedas estables?",
+        "¿Qué es el interés compuesto?", "¿Cómo leer un estado financiero?",
+        "¿Qué es un fideicomiso?", "¿Cómo funciona el crowdfunding?"
     ]
-    
     TEMAS_ESTAFAS = [
         "El colapso de FTX", "La estafa de OneCoin", "Mt. Gox y el robo de Bitcoin",
         "El fraude de Bernie Madoff", "La crisis de las hipotecas subprime 2008",
-        "El escándalo de Enron", "La estafa de QuadrigaCX", "El caso de BitConnect"
+        "El escándalo de Enron", "La estafa de QuadrigaCX", "El caso de BitConnect",
+        "Fraude de Wirecard", "Estafa de PwC y Bank of Credit", "Caso de Olympus"
     ]
 
-    # Elegir un tema aleatorio del tipo correspondiente
     if tipo == "noticia":
         tema_elegido = random.choice(TEMAS_NOTICIAS)
     elif tipo == "educativo":
         tema_elegido = random.choice(TEMAS_EDUCATIVOS)
-    else:  # estafa
+    else:
         tema_elegido = random.choice(TEMAS_ESTAFAS)
 
     prompt = f"""Eres un EXPERTO EN FINANZAS, PERIODISTA ECONÓMICO y ESPECIALISTA EN SEO PARA YOUTUBE 2026.
 
-📌 TEMA A TRATAR: "{tema_elegido}"
-📌 TIPO DE CONTENIDO: {tipo.upper()}
+📌 TEMA: "{tema_elegido}"
+📌 TIPO: {tipo.upper()}
 
-🎯 REGLAS CRÍTICAS DE CONTENIDO:
-1. El relato DEBE ser ENGAÑOSO y cautivador desde el primer segundo.
-2. Usa un TONO COLOQUIAL y DIRECTO (como si estuvieras contando una historia a un amigo).
-3. LONGITUD EXACTA: entre 150 y 170 palabras.
-4. ESTRUCTURA: GANCHO (5-10 palabras) → CONTEXTO (20-30) → DESARROLLO (80-90) → CIERRE PODEROSO (30-40).
-5. El cierre debe incluir una llamada a la acción sutil (ej. "¿Tú qué harías?", "Esto cambió todo", etc.)
+🎯 REGLAS DE CONTENIDO:
+1. Relato ENGAÑOSO y cautivador desde el primer segundo.
+2. Tono COLOQUIAL y DIRECTO.
+3. LONGITUD: 150-170 palabras exactas.
+4. ESTRUCTURA: GANCHO (5-10) → CONTEXTO (20-30) → DESARROLLO (80-90) → CIERRE PODEROSO (30-40).
+5. Cierre con CTA sutil (ej. "¿Tú qué harías?", "Esto cambió todo").
 
-🎯 REGLAS SEO PARA YOUTUBE SHORTS 2026:
-1. TÍTULO: Fórmula [PALABRA CLAVE] + [VERBO DE IMPACTO] + [GANCHO EMOCIONAL]
-   - Longitud: 55-70 caracteres
-   - La PRIMERA PALABRA debe ser una de las palabras_clave
-   - Ejemplos: "Bitcoin rompe récord y esto pasó", "Oro se dispara ¿qué hago?", "FTX colapsó y perdí todo"
-   - PROHIBIDO: títulos genéricos como "El misterio de...", "La verdad sobre..."
-   
-2. PALABRAS CLAVE (2-3): Deben ser términos de búsqueda con alto volumen en finanzas.
-   
-3. TAGS (10-15): Combina:
-   - Tags principales (ej. bitcoin, finanzas, inversiones)
-   - Tags long-tail (ej. como invertir en oro, que es un exchange)
-   - Tags de tendencia (ej. criptomonedas 2026, mercado financiero)
-   - Tags geográficos (México, Latinoamérica)
-   
-4. DESCRIPCIÓN: 
-   - Línea 1: Gancho de máximo 90 caracteres
-   - Línea 2: Contexto en una oración
-   - Línea 3: Fuente o base del relato
-   - Línea 4: CTA al canal
-   - Línea 5: Redes sociales
-   - Línea 6: Hashtags (máx 5)
+🎯 REGLAS SEO PARA YOUTUBE SHORTS 2026 (CRÍTICO):
+1. TÍTULO: 
+   - Longitud OBLIGATORIA: entre 50 y 70 caracteres (¡NO MENOS DE 50!).
+   - Fórmula: [PALABRA CLAVE] + [VERBO DE IMPACTO] + [GANCHO EMOCIONAL].
+   - La PRIMERA PALABRA debe ser una de las palabras_clave.
+   - Ejemplos válidos (50-70 chars):
+     * "Enron: cómo el fraude más grande de Wall Street destruyó todo"
+     * "Bitcoin en máximo histórico: ¿qué hacer con tus criptomonedas?"
+     * "FTX colapsó y esto pasó con el dinero de los inversores"
+   - PROHIBIDO: títulos genéricos o cortos.
 
-5. PALABRAS PORTADA: 2-3 palabras cortas e impactantes para la miniatura.
-   Ejemplos: "RÉCORD", "¿QUÉ HAGO?", "COLAPSO", "GANAS", "PIERDE", "SUBE"
+2. PALABRAS CLAVE (2-3): Términos de alto volumen de búsqueda en finanzas/cripto.
+   - Ejemplos: Bitcoin, Inflación, Oro, Inversión, Exchange, ETF, Bancos, Seguros, Finanzas personales.
 
-🎯 REGLAS DE ÉPOCA:
-- Si el tema es histórico (estafa), usa el año exacto del suceso.
-- Si es actual o educativo, usa el año actual.
+3. TAGS (15-20): Combina:
+   - Tags principales de alto volumen (ej. bitcoin, finanzas, inversiones, oro, criptomonedas)
+   - Tags long-tail (ej. como invertir en oro, que es un exchange, mejores ETFs 2026)
+   - Tags de tendencia (ej. mercado financiero 2026, cripto noticias)
+   - Tags geográficos (México, Latinoamérica, Estados Unidos)
+   - Tags específicos del tema (ej. Enron, FTX, Madoff)
+
+4. DESCRIPCIÓN:
+   - Línea 1: Gancho de 90 caracteres máximo.
+   - Línea 2: Contexto en una oración.
+   - Línea 3: Fuente del relato.
+   - Línea 4: CTA al canal.
+   - Línea 5: Redes sociales.
+   - Línea 6: Hashtags (máx 5, con #Shorts incluido).
+
+5. PALABRAS PORTADA: 2-3 palabras cortas e impactantes para miniatura (ej. "RÉCORD", "COLAPSO", "¿QUÉ HAGO?").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 📤 RESPUESTA: Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título SEO 55-70 caracteres con keyword al inicio",
-    "titulo_alternativo": "Segundo título para A/B testing",
+    "titulo": "Título SEO de 50-70 caracteres con keyword al inicio",
+    "titulo_alternativo": "Segundo título para A/B testing (también de 50-70 chars)",
     "anio_suceso": 2024,
     "palabras_clave": ["keyword1", "keyword2", "keyword3"],
     "gancho_descripcion": "Gancho de 90 caracteres máximo",
     "contexto_descripcion": "Una oración de contexto",
     "fuente_relato": "Fuente del relato (ej. 'Basado en análisis de mercado')",
-    "texto_completo": "Relato de 150-170 palabras en primera persona o tercera, tono coloquial",
+    "texto_completo": "Relato de 150-170 palabras",
     "palabras_portada": "2-3 palabras para miniatura",
-    "tags": "10-15 tags separados por coma (máx 480 caracteres)",
+    "tags": "15-20 tags separados por coma (máx 480 caracteres)",
     "tema_especifico": "{tema_elegido}"
 }}
 """
@@ -281,7 +278,7 @@ def generar_guion_financiero(tipo):
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 1200,
+        "max_tokens": 1300,
         "response_format": {"type": "json_object"}
     }
 
@@ -293,7 +290,7 @@ def generar_guion_financiero(tipo):
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
             
-            # Limpiar respuesta
+            # Limpiar JSON
             respuesta = re.sub(r"```json\s*", "", respuesta)
             respuesta = re.sub(r"```\s*", "", respuesta)
             inicio = respuesta.find("{")
@@ -306,46 +303,47 @@ def generar_guion_financiero(tipo):
             else:
                 raise ValueError("No se encontró JSON")
 
-            # Validar campos
+            # Validar texto
             if "texto_completo" not in data or len(data["texto_completo"]) < 100:
                 raise ValueError("Texto demasiado corto")
-            
             data["texto_completo"] = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', data["texto_completo"])
 
-            # Limpiar título
+            # 🔥 FORZAR TÍTULO DE AL MENOS 50 CARACTERES
             titulo = data.get("titulo", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
             titulo = ' '.join(titulo.split())
-            
-            # Forzar keyword al inicio del título
+
             keywords = data.get("palabras_clave", [])
             if keywords and isinstance(keywords, list) and keywords:
                 primera_kw = keywords[0].strip()
                 if primera_kw and not titulo.lower().startswith(primera_kw.lower()):
-                    # Limpiar artículos iniciales
                     titulo_sin_art = re.sub(r'^(El|La|Los|Las|Un|Una|Unos|Unas)\s+', '', titulo, flags=re.IGNORECASE)
                     if titulo_sin_art != titulo:
                         titulo = f"{primera_kw.capitalize()} {titulo_sin_art}"
                     else:
                         titulo = f"{primera_kw.capitalize()} {titulo}"
-                
-                # Asegurar que no exceda 75 caracteres
-                if len(titulo) > 75:
-                    titulo = titulo[:72] + "..."
-            
+
+            # 🔥 SI EL TÍTULO TIENE MENOS DE 50 CARACTERES, RELLENAR CON MÁS CONTEXTO
+            if len(titulo) < 50:
+                # Agregar más palabras al final para llegar a 50
+                tema_palabras = tema_elegido.split()
+                if len(tema_palabras) > 3:
+                    extra = " " + " ".join(tema_palabras[-3:])
+                else:
+                    extra = " - Análisis financiero completo"
+                titulo = (titulo + extra)[:70]  # Cortar en 70 si excede
+                # Asegurar que termine bien
+                if len(titulo) < 50:
+                    titulo = titulo + " - Lo que debes saber"
+                    titulo = titulo[:70]
+
             data["titulo"] = titulo
 
-            # Verificar duplicado
             if titulo_ya_publicado(titulo):
                 print(f"   ⚠️ Título YA PUBLICADO. Regenerando...")
                 raise ValueError("Título duplicado")
 
-            # Actualizar época
-            anio = data.get("anio_suceso")
-            if anio:
-                print(f"📅 Año del suceso: {anio}")
-
-            # Generar hashtags dinámicos
+            # Generar hashtags
             hashtags = ["#Shorts"]
             if keywords:
                 for kw in keywords[:2]:
@@ -353,26 +351,65 @@ def generar_guion_financiero(tipo):
                     kw_clean = re.sub(r'[^a-zA-Z0-9]', '', kw_clean)
                     if kw_clean and len(kw_clean) > 2:
                         hashtags.append(f"#{kw_clean.capitalize()}")
-            hashtags.append(random.choice(["#Finanzas", "#Cripto", "#Inversiones", "#Economía", "#Oro", "#Bancos"]))
+            hashtags.append(random.choice(["#Finanzas", "#Cripto", "#Inversiones", "#Economía", "#Oro", "#Bancos", "#EducaciónFinanciera"]))
             data["hashtags_descripcion"] = " ".join(hashtags)
 
-            # Limpiar tags y añadir keywords
+            # 🔥 MEJORAR TAGS: Asegurar variedad y alto volumen
             tags_raw = data.get("tags", "")
-            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()][:15]
-            for kw in keywords:
-                if kw.lower() not in [t.lower() for t in tags_list]:
-                    tags_list.append(kw.lower())
+            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
             
-            # Añadir tags de respaldo
-            extras = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges"]
-            i = 0
-            while len(tags_list) < 10 and i < len(extras):
-                if extras[i] not in tags_list:
-                    tags_list.append(extras[i])
-                i += 1
-            data["tags"] = ", ".join(tags_list[:15])
-
-            print(f"   🏷️ Título SEO: {data['titulo']} ({len(data['titulo'])} chars)")
+            # Tags principales (siempre presentes)
+            tags_principales = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges", "criptomonedas", "mercado financiero", "educación financiera"]
+            
+            # Tags específicos por tema
+            tema_lower = tema_elegido.lower()
+            if "bitcoin" in tema_lower or "cripto" in tema_lower:
+                tags_principales.extend(["bitcoin", "criptomonedas", "blockchain", "inversiones en cripto"])
+            if "oro" in tema_lower:
+                tags_principales.extend(["oro", "inversiones en oro", "metales preciosos", "reserva de valor"])
+            if "estafa" in tema_lower or "fraude" in tema_lower or "colapso" in tema_lower:
+                tags_principales.extend(["estafas financieras", "fraude", "crisis financiera", "historia de fraudes"])
+            if "etf" in tema_lower:
+                tags_principales.extend(["etf", "fondos cotizados", "inversiones pasivas"])
+            if "seguro" in tema_lower:
+                tags_principales.extend(["seguros", "protección financiera", "planeación financiera"])
+            
+            # Tags geográficos
+            tags_geograficos = ["méxico", "latinoamérica", "estados unidos", "wall street", "economía global"]
+            
+            # Tags long-tail
+            tags_longtail = [
+                "como invertir", "que es un exchange", "mejores ETFs", "ahorros e inversiones",
+                "finanzas personales", "educación financiera para principiantes", "mercados financieros",
+                "análisis económico", "consejos financieros", "inversiones seguras", "dinero e inversión"
+            ]
+            
+            # Mezclar y seleccionar 15-20 tags
+            tags_final = set()
+            # Añadir keywords principales
+            for kw in keywords:
+                if kw.lower() not in tags_final:
+                    tags_final.add(kw.lower())
+            # Añadir tags principales (hasta 8)
+            for tag in tags_principales:
+                if len(tags_final) < 8:
+                    tags_final.add(tag)
+            # Añadir tags geográficos (2-3)
+            for tag in random.sample(tags_geograficos, min(3, len(tags_geograficos))):
+                if len(tags_final) < 12:
+                    tags_final.add(tag)
+            # Añadir tags long-tail (hasta 15-18)
+            for tag in random.sample(tags_longtail, min(6, len(tags_longtail))):
+                if len(tags_final) < 18:
+                    tags_final.add(tag)
+            # Añadir tags del tema (si no están ya)
+            for tag in tags_list:
+                if len(tags_final) < 20 and tag.lower() not in tags_final and len(tag) > 2:
+                    tags_final.add(tag.lower())
+            
+            data["tags"] = ", ".join(list(tags_final)[:20])
+            
+            print(f"   🏷️ Título: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   🔑 Keywords: {keywords}")
             print(f"   📌 Tema: {data.get('tema_especifico', 'N/A')}")
             return data
@@ -386,46 +423,73 @@ def generar_guion_financiero(tipo):
     sys.exit(1)
 
 # ================================================================
-# 🖼️ GENERAR PROMPT DE IMAGEN PREMIUM PARA AGNES
+# 🎨 GENERAR PROMPT DE IMAGEN CON ESTRATEGIA REAL + NEÓN
 # ================================================================
-def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, segmento_anterior_texto=None, index_segmento=0, total_segmentos=1, tema=None):
+def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena, 
+                                   segmento_anterior_texto=None, 
+                                   index_segmento=0, total_segmentos=1, 
+                                   tema=None, es_primer_frame=False):
+    """
+    Estrategia visual de retención:
+    - Frame 0 (primer segmento): NEÓN impactante (scroll-stopper)
+    - Segmentos intermedios: REAL + acento neón (10-30%)
+    - Último segmento: 100% REAL (cierre creíble)
+    """
     contexto_previo = ""
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: '{segmento_anterior_texto[:120]}'"
 
-    # Instrucciones de etapa con descripciones más ricas
-    instrucciones_etapa = {
-        "contexto_general": f"Wide establishing shot of a modern financial district or corporate environment, skyscrapers, glass buildings, professional atmosphere, {PALETA_COLOR_ACTUAL}, sharp focus, hyperrealistic, 8k quality",
-        "analisis_datos": f"Close-up composition of financial data screens, trading charts, candlestick graphs, monitors with stock market data, modern office equipment, {PALETA_COLOR_ACTUAL}, cinematic lighting, ultra-detailed",
-        "evento_principal": f"Medium shot of a business environment, meeting room or office, professionals in business attire, documents, computer screens, financial decision moment, {PALETA_COLOR_ACTUAL}, documentary style, natural expressions",
-        "climax": f"Dramatic financial event scene, intense atmosphere, people reacting, market volatility, trading floor energy, {PALETA_COLOR_ACTUAL}, dramatic lighting, cinematic composition",
-        "resolucion": f"Calm aftermath scene, professionals reflecting, relaxed office atmosphere, conclusion of financial event, {PALETA_COLOR_ACTUAL}, warm lighting, peaceful composition",
-    }
-    
-    # Adaptar según el tema
-    if tema and "oro" in tema.lower():
-        instrucciones_etapa["evento_principal"] += ", gold bars, precious metals, vault, luxury banking"
-    elif tema and "bitcoin" in tema.lower() or "cripto" in tema.lower():
-        instrucciones_etapa["evento_principal"] += ", cryptocurrency coins, digital screens with blockchain data, modern fintech"
-    elif tema and "estafa" in tema.lower() or "colapso" in tema.lower():
-        instrucciones_etapa["climax"] += ", dramatic financial collapse, concerned faces, crisis atmosphere"
+    # Determinar el estilo de imagen según la etapa y posición
+    if es_primer_frame and index_segmento == 0:
+        # Primer frame: NEÓN impactante (scroll-stopper)
+        estilo_base = f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on surfaces, high contrast, electric atmosphere, dramatic shadows, futuristic corporate look"
+        porcentaje_real = 0
+        porcentaje_neon = 100
+    elif etapa in ["climax"]:
+        # Clímax: Real + NEÓN fuerte (50/50)
+        estilo_base = f"Hyperrealistic photography combined with intense {COLOR_NEON_ACTUAL} neon accents, dramatic lighting, high contrast, cinematic composition, financial crisis atmosphere"
+        porcentaje_real = 50
+        porcentaje_neon = 50
+    elif etapa in ["evento_principal", "analisis_datos"]:
+        # Evento principal: Real + acento neón (70/30)
+        estilo_base = f"Realistic photograph with subtle {COLOR_NEON_ACTUAL} neon highlights, natural lighting mixed with artificial glow, professional corporate setting"
+        porcentaje_real = 70
+        porcentaje_neon = 30
+    elif etapa in ["contexto_general"]:
+        # Contexto: Real puro (100% real)
+        estilo_base = f"Authentic documentary-style photograph, natural lighting, real-world environment, no filters, no neon"
+        porcentaje_real = 100
+        porcentaje_neon = 0
+    else:  # resolución
+        # Resolución: 100% REAL (cierre creíble)
+        estilo_base = f"Realistic, natural photograph, natural lighting, authentic environment, calm atmosphere, no artificial effects"
+        porcentaje_real = 100
+        porcentaje_neon = 0
 
-    instruccion = instrucciones_etapa.get(etapa, instrucciones_etapa["contexto_general"])
+    # Construir prompt con nivel de detalle según el estilo
+    if porcentaje_neon > 70:
+        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL} with {COLOR_NEON_ACTUAL} accents, sharp focus, hyperdetailed, 8k resolution, cinematic"
+    elif porcentaje_neon > 20:
+        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL} with subtle neon touches, realistic textures, professional photography, 4k quality"
+    else:
+        descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL}, natural tones, documentary style, sharp focus, authentic"
 
-    # Ángulos de cámara variados
-    angulos = [
-        "eye level shot, natural perspective",
-        "slightly high angle, comprehensive view",
-        "slightly low angle, dramatic effect",
-        "wide establishing shot, immersive environment",
-        "medium shot, balanced composition"
-    ]
-    angulo = angulos[index_segmento % len(angulos)]
+    # Ajustar según el tema (agregar elementos específicos)
+    tema_lower = tema.lower() if tema else ""
+    if "bitcoin" in tema_lower or "cripto" in tema_lower:
+        elementos_tema = "digital currency, blockchain data, crypto screens, modern fintech environment"
+    elif "oro" in tema_lower:
+        elementos_tema = "gold bars, precious metals, vault, luxury banking setting"
+    elif "estafa" in tema_lower or "fraude" in tema_lower or "colapso" in tema_lower:
+        elementos_tema = "dramatic financial collapse scene, crisis atmosphere, concerned professionals"
+    else:
+        elementos_tema = "modern financial setting, professional environment"
 
+    # Construir prompt completo
     prompt = f"""
-You are a WORLD-CLASS CINEMATOGRAPHER specializing in FINANCIAL and CORPORATE photography for premium YouTube content.
+You are a WORLD-CLASS CINEMATOGRAPHER specializing in FINANCIAL PHOTOGRAPHY with a focus on RETENTION OPTIMIZATION.
 
-STORY SEGMENT:
+STORY FRAGMENT:
 \"\"\"
 {segmento_texto}
 \"\"\"
@@ -436,20 +500,16 @@ CREATE A PREMIUM PHOTO PROMPT for a vertical (9:16) image.
 SCENE DETAILS:
 - STAGE: {etapa}
 - LOCATION: {ubicacion_escena}
-- CAMERA ANGLE: {angulo}
-- VISUAL STYLE: {ESTILO_VISUAL_ACTUAL}
-- COLOR PALETTE: {PALETA_COLOR_ACTUAL}
+- VISUAL STYLE: {descripcion_estilo}
+- SUBJECT: {elementos_tema}
 
-COMPOSITION RULES (STRICT):
+COMPOSITION RULES (CRITICAL FOR RETENTION):
 1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces.
-2. MAIN SUBJECT: The environment, objects, and setting (buildings, computers, screens, documents, financial tools).
+2. MAIN SUBJECT: The environment, objects, and setting (buildings, computers, screens, documents, gold, etc.).
 3. If people appear: They occupy AT MOST 15% of the frame, small and at distance.
-4. If NO people are mentioned: Show ONLY the environment.
-5. Style: Hyperrealistic, premium quality, sharp focus, natural lighting.
-6. ERA: Modern, contemporary financial setting.
-7. ATMOSPHERE: Professional, sophisticated, clean, high-end.
-
-SPECIFIC SCENE DIRECTIVE: {instruccion}
+4. FOCUS: Sharp, hyperrealistic, premium quality.
+5. ATMOSPHERE: Professional, sophisticated, clean, high-end.
+6. COLOR HARMONY: {PALETA_BASE_ACTUAL} with appropriate neon accents as indicated.
 
 ABSOLUTE PROHIBITIONS:
 - NO close-up faces, NO portraits, NO headshots
@@ -457,6 +517,7 @@ ABSOLUTE PROHIBITIONS:
 - NO clones, NO duplicates, NO twins
 - NO text, NO watermarks, NO logos
 - NO low quality, NO blurry images
+- NO abandoned or ruined environments (unless specifically historical)
 
 Return ONLY the English prompt, no explanations.
 """
@@ -467,33 +528,33 @@ Return ONLY the English prompt, no explanations.
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.6,
-        "max_tokens": 300,
+        "max_tokens": 350,
     }
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=60)
         r.raise_for_status()
         prompt_img = r.json()["choices"][0]["message"]["content"].strip()
         # Añadir detalles de calidad premium
-        prompt_img += f", hyperrealistic, 8k resolution, sharp focus, professional corporate photography, {ESTILO_VISUAL_ACTUAL}, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no text, no watermark"
+        prompt_img += f", hyperrealistic, 8k resolution, sharp focus, professional corporate photography, vertical 9:16, wide establishing shot, environment as main subject, no close-up face, no text, no watermark"
         return prompt_img
     except Exception as e:
         print(f"⚠️ Error generando prompt de imagen: {e}")
-        return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, professional corporate photography, {PALETA_COLOR_ACTUAL}"
+        # Fallback con estilo básico
+        return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
 
 # ================================================================
-# 🖼️ GENERAR IMAGEN CON AGNES (calidad premium)
+# 🖼️ GENERAR IMAGEN CON AGNES
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt = re.sub(r"\n+", " ", prompt).strip()
     prompt = re.sub(r'"', "'", prompt)
-    prompt = prompt[:900]
+    prompt = prompt[:950]
     
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {"Authorization": f"Bearer {AGNES_API_KEY}", "Content-Type": "application/json"}
     
-    # Negative prompt más agresivo para evitar defectos
     negative = (
-        "multiple people, crowd, group of people, two people, three people, "
+        "multiple people, crowd, group, two people, three people, "
         "close-up face, portrait, headshot, face filling frame, "
         "gore, blood, violence, weapons, "
         "clones, duplicates, twins, doppelganger, "
@@ -502,7 +563,7 @@ def generar_imagen_vertical(prompt, intentos=3):
         "text, watermark, logo, signature, "
         "cartoon, animated, painting, drawing, sketch, "
         "oversaturated, oversharpened, artificial, fake, "
-        "abandoned, rusty, decayed, ruined, "
+        "abandoned, rusty, decayed, ruined (unless historical), "
         "monster, zombie, corpse, ghost, "
         "surreal, impossible, floating objects"
     )
@@ -534,12 +595,11 @@ def generar_imagen_vertical(prompt, intentos=3):
     return None
 
 # ================================================================
-# 📝 GENERAR AUDIO CON EDGE-TTS (voz natural)
+# 📝 GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
     
-    # Limpiar texto para TTS
     texto_limpio = re.sub(r'[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ0-9\s.,;:!?¿¡\'\"]', '', texto)
     texto_limpio = re.sub(r'\s+', ' ', texto_limpio).strip()
     
@@ -548,7 +608,6 @@ def generar_audio(texto, index, intentos_por_voz=2):
     
     filename = f"audio_capital_{index}.mp3"
     
-    # Probar voces en orden
     voces_a_probar = [CONFIG_VOZ_ACTUAL] + [v for v in VOCES_DISPONIBLES if v["voz"] != CONFIG_VOZ_ACTUAL["voz"]]
     
     for voz_config in voces_a_probar:
@@ -579,7 +638,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
     return None
 
 # ================================================================
-# 🎬 GENERAR RECURSOS POR SEGMENTO
+# 🎬 GENERAR RECURSOS POR SEGMENTO (con estrategia visual)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
@@ -591,12 +650,15 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         ubic = ubicaciones[idx] if idx < len(ubicaciones) else "oficina financiera"
         seg_anterior = segmentos[idx-1] if idx > 0 else None
         
-        # Generar prompt premium
+        # Determinar si es el primer frame (scroll-stopper)
+        es_primer_frame = (idx == 0)
+        
+        # Generar prompt con estrategia real+neón
         prompt_img = generar_prompt_imagen_segmento(
             seg, etapa, ubic, seg_anterior, 
-            idx, total, tema
+            idx, total, tema, es_primer_frame
         )
-        print(f"    📝 Prompt generado (primeros 100 chars): {prompt_img[:100]}...")
+        print(f"    📝 Prompt generado (primeros 120 chars): {prompt_img[:120]}...")
         
         # Generar imagen
         img_url = None
@@ -617,7 +679,6 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
             print(f"    ❌ Falló audio en segmento {idx+1}. Abortando.")
             return None
         
-        # Obtener duración
         try:
             dur = AudioFileClip(audio_path).duration
         except:
@@ -626,11 +687,13 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         recursos.append({
             "imagen_url": img_url,
             "audio_path": audio_path,
-            "duracion": dur
+            "duracion": dur,
+            "etapa": etapa,
+            "estilo": "real+neon" if "neon" in prompt_img.lower() else "real"
         })
         
         if idx < total - 1:
-            time.sleep(12)  # Pausa entre imágenes para evitar rate limit
+            time.sleep(12)
     
     return recursos
 
@@ -673,7 +736,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
         
         clips_video.append(video_clip)
         
-        # Procesar audio
         try:
             audio = AudioFileClip(audio_path)
             clips_audio.append(audio)
@@ -693,11 +755,9 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     audio_narracion = concatenate_audioclips(audio_final_parts)
     duracion_total = audio_narracion.duration
     
-    # Video
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
-    # Fondo musical
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -717,7 +777,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     video.close()
     audio_final.close()
     
-    # Limpiar archivos temporales de imagen
+    # Limpiar temporales
     for f in os.listdir("."):
         if f.startswith("temp_cap_") and f.endswith(".jpg"):
             try: os.remove(f)
@@ -742,7 +802,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
-    # Construir descripción SEO
     descripcion = f"""{gancho}
 
 {contexto}
@@ -770,7 +829,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
         "status": {
             "privacyStatus": "public",
             "selfDeclaredMadeForKids": False,
-            "containsSyntheticMedia": True,  # 🔴 ACTIVA EL BOTÓN "CONTENIDO GENERADO CON IA"
+            "containsSyntheticMedia": True,
         },
     }
     
@@ -786,22 +845,22 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de SHORTS Premium")
+    print("🎬 Capital Digital - Bot de SHORTS (Estrategia REAL+NEÓN)")
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['nombre']}")
+    print(f"🎨 Paleta: {PALETA_BASE_ACTUAL}")
+    print(f"💡 Color neón: {COLOR_NEON_ACTUAL}")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
         print("❌ Falta YOUTUBE_USER_TOKEN_CAPITAL")
         sys.exit(1)
     
-    # Verificar límite diario
     publicadas = obtener_publicaciones_hoy()
     if publicadas >= META_DIARIA_SHORTS:
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
-    # Elegir tipo según la hora
     hora = datetime.now(pytz.timezone("America/Mexico_City")).hour
     if 7 <= hora < 11:
         tipo = "noticia"
@@ -811,36 +870,28 @@ def main():
         tipo = "estafa"
     
     print(f"📌 Tipo: {tipo.upper()}")
-    print(f"🎨 Paleta de color: {PALETA_COLOR_ACTUAL[:50]}...")
-    print(f"📷 Estilo visual: {ESTILO_VISUAL_ACTUAL[:50]}...")
     
-    # Cargar estado y fondo musical
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
     
-    # Generar guion
     guion = generar_guion_financiero(tipo)
     texto = guion["texto_completo"]
     tema = guion.get("tema_especifico", "")
     print(f"📝 Texto: {len(texto.split())} palabras")
     print(f"📌 Tema: {tema}")
     
-    # Dividir en segmentos
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=45)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
     print(f"🎬 {len(segmentos)} segmentos generados")
     
-    # Generar recursos
     recursos = generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema)
     if not recursos:
         print("❌ Error generando recursos.")
         sys.exit(1)
     
-    # Montar video
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video generado: {video_path}")
     
-    # Subir a YouTube
     video_id = subir_a_youtube(
         video_path=video_path,
         titulo=guion["titulo"],
@@ -851,7 +902,6 @@ def main():
         fuente=guion.get("fuente_relato", "Basado en análisis financiero")
     )
     
-    # Guardar estado
     guardar_titulo_publicado(guion["titulo"])
     incrementar_publicaciones_hoy()
     guardar_estado(estado)
@@ -861,7 +911,7 @@ def main():
     print("="*60)
 
 # ================================================================
-# FUNCIONES AUXILIARES
+# AUXILIARES
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=45):
     oraciones = re.split(r'(?<=[.!?¿¡])\s+', texto)
@@ -898,19 +948,19 @@ def asignar_etapas_visuales(segmentos):
         
         if progreso < 0.2:
             etapa = "contexto_general"
-            ubic = "distrito financiero moderno u oficina corporativa"
+            ubic = "distrito financiero moderno, oficinas corporativas, entorno profesional"
         elif progreso < 0.4:
             etapa = "analisis_datos"
-            ubic = "sala de trading con pantallas y gráficos financieros"
+            ubic = "sala de trading con pantallas, gráficos financieros, computadoras"
         elif progreso < 0.65:
             etapa = "evento_principal"
             ubic = "lugar del suceso financiero (banco, exchange, junta ejecutiva)"
         elif progreso < 0.85:
             etapa = "climax"
-            ubic = "momento crítico del evento financiero"
+            ubic = "momento crítico, tensión financiera máxima"
         else:
             etapa = "resolucion"
-            ubic = "conclusión, regreso a la normalidad"
+            ubic = "conclusión, regreso a la normalidad, ambiente calmado"
         
         etapas.append(etapa)
         ubicaciones.append(ubic)
