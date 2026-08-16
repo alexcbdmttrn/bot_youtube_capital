@@ -43,7 +43,7 @@ META_DIARIA_LARGOS = 1
 DIAS_SIN_REPETIR_TEMA = 45
 
 # ================================================================
-# VOZ FIJA (Jorge) - se ajustará dinámicamente
+# VOZ FIJA (Jorge)
 # ================================================================
 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
@@ -251,7 +251,7 @@ DEVUELVE SOLO EL TEXTO DEL GUION EXPANDIDO, con los mismos bloques [HOOK], [INTR
         return None
 
 # ================================================================
-# GENERAR GUION LARGO (MEJORADO)
+# GENERAR GUION LARGO (CON PROMPT DE MINIATURA)
 # ================================================================
 def generar_guion_largo(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -353,6 +353,14 @@ Cada bloque tendrá un prompt de imagen específico para Agnes.
 - PROHIBIDO: personas, rostros, caras en primer plano.
 - Permitido: gráficos, monedas, datos, visualizaciones, mapas, tecnología.
 
+🎯 🖼️ DISEÑO DE LA MINIATURA (IMPORTANTE):
+Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fondo debe ser IMPACTANTE, con colores neón, alto contraste, y relacionado con el tema del video.
+- Estilo: "crypto YouTube thumbnail", neón, high contrast, cinematic, hyperrealistic.
+- PROHIBIDO: personas, rostros, caras, textos, letras, palabras.
+- Permitido: Bitcoin, oro, gráficos de trading, fuego, hielo, tecnología, redes, mapas.
+- Tamaño: 1280x720 (horizontal).
+- Ejemplo para "Bitcoin vs Oro": "cinematic wide shot of a golden Bitcoin coin colliding with a golden brick, neon cyan and gold lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark".
+
 📤 RESPUESTA EN JSON:
 {{
     "titulo": "Título con emoji (60-70 chars)",
@@ -364,13 +372,10 @@ Cada bloque tendrá un prompt de imagen específico para Agnes.
     "guion": "Guion completo de 1300-1500 palabras con los 6 bloques marcados",
     "segmentos": [
         {{"bloque": "HOOK", "texto": "texto (~10 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "INTRO", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "PROBLEMA", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "DESARROLLO", "texto": "texto (~300 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "SOLUCION", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "CIERRE", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}}
+        ...
     ],
-    "palabras_portada": "2-3 palabras para miniatura"
+    "palabras_portada": "2-3 palabras para el texto de la miniatura (ej. 'BITCOIN vs ORO', 'FOMO y PÁNICO', 'COLAPSO FTX')",
+    "prompt_miniatura": "Prompt en inglés para el fondo de la miniatura (SIN texto, SIN personas, 1280x720)"
 }}
 """
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -413,6 +418,10 @@ Cada bloque tendrá un prompt de imagen específico para Agnes.
                 global VOZ_FIJA
                 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
                 CONFIG_VOZ_ACTUAL = VOZ_FIJA
+            
+            # Asegurar que exista prompt_miniatura
+            if "prompt_miniatura" not in result:
+                result["prompt_miniatura"] = f"cinematic wide shot of financial data and glowing charts, neon cyan and magenta lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark"
             
             return result, tema_elegido
         except Exception as e:
@@ -457,100 +466,88 @@ def generar_imagen_horizontal(prompt, intentos=3):
     return None
 
 # ================================================================
-# MINIATURA MEJORADA (SIN PERSONAS Y CON VARIEDAD)
+# MINIATURA PROFESIONAL (con prompt específico + texto PIL)
 # ================================================================
-def crear_miniatura_personalizada(imagenes_disponibles, texto_portada, salida="miniatura_largo.jpg"):
+def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo.jpg"):
     """
-    Selecciona una imagen aleatoria de las disponibles (excluyendo HOOK para evitar caras).
+    Genera una miniatura profesional con:
+    - Fondo generado por Agnes usando prompt_miniatura (sin texto).
+    - Texto superpuesto con PIL (fuente Impact/Anton, borde, sombra, neón).
     """
-    # Excluir imágenes de HOOK (primera) para evitar caras
-    imagenes_filtradas = [url for url in imagenes_disponibles if "hook" not in url.lower()]
-    if not imagenes_filtradas:
-        imagenes_filtradas = imagenes_disponibles
-    
-    imagen_url = random.choice(imagenes_filtradas)
-    print(f"🖼️ Miniatura seleccionada de: {imagen_url[:50]}...")
-    
     try:
-        if imagen_url.startswith("http"):
-            r = requests.get(imagen_url, timeout=30)
+        # 1. Generar fondo con Agnes usando el prompt específico
+        prompt_completo = f"{prompt_miniatura}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark"
+        fondo_url = generar_imagen_horizontal(prompt_completo, intentos=2)
+        if not fondo_url:
+            print("⚠️ No se pudo generar fondo, usando placeholder")
+            fondo_url = "https://via.placeholder.com/1280x720/1a1a3a/4a8af4?text=Capital+Digital"
+        
+        # 2. Descargar imagen
+        if fondo_url.startswith("http"):
+            r = requests.get(fondo_url, timeout=30)
             r.raise_for_status()
-            img_path = "temp_thumb.jpg"
+            img_path = "temp_thumb_fondo.jpg"
             with open(img_path, "wb") as f:
                 f.write(r.content)
         else:
-            img_path = imagen_url
+            img_path = fondo_url
         
         img = Image.open(img_path)
         img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
         draw = ImageDraw.Draw(img)
         
+        # 3. Texto de la miniatura
         texto = texto_portada.upper().strip()
-        palabras = texto.split()
-        if len(palabras) > 3:
-            texto = ' '.join(palabras[:3])
+        # Limitar a 3 líneas máximo
+        lineas = texto.split()
+        if len(lineas) > 3:
+            texto = ' '.join(lineas[:3])
+        else:
+            texto = ' '.join(lineas)
         
+        # 4. Cargar fuente (Intentar Anton, Impact, o Arial)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 140)
+            # Intentar Anton (descargar de Google Fonts y poner en /fonts)
+            font = ImageFont.truetype("fonts/Anton.ttf", 100)
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 140)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/Impact.ttf", 100)
             except:
-                font = ImageFont.load_default()
+                try:
+                    font = ImageFont.truetype("Impact.ttf", 100)
+                except:
+                    font = ImageFont.load_default()
         
+        # 5. Calcular posición centrada
         bbox = draw.textbbox((0, 0), texto, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
-        x = (1280 - text_width) // 2
-        y = 720 - text_height - 80
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        x = (1280 - text_w) // 2
+        y = (720 - text_h) // 2 + 60  # Ligeramente abajo del centro
         
-        # Rectángulo neón
-        rect_margin = 30
-        rect_x = x - rect_margin
-        rect_y = y - rect_margin - 20
-        rect_w = text_width + rect_margin * 2
-        rect_h = text_height + rect_margin * 2 + 40
-        
-        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
-        overlay_draw = ImageDraw.Draw(overlay)
-        
-        for i in range(0, 6):
-            alpha = 150 - i * 25
-            if alpha > 0:
-                overlay_draw.rectangle(
-                    [rect_x - i, rect_y - i, rect_x + rect_w + i, rect_y + rect_h + i],
-                    outline=(0, 200, 255, alpha),
-                    width=3
-                )
-        
-        overlay_draw.rectangle(
-            [rect_x, rect_y, rect_x + rect_w, rect_y + rect_h],
-            fill=(0, 0, 0, 180)
-        )
-        
-        img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
-        draw = ImageDraw.Draw(img)
-        
-        # Sombra
+        # 6. Sombra gruesa (negra)
         for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4), (0, 6), (0, -6), (6, 0), (-6, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
         
+        # 7. Borde blanco (opcional, para mejor legibilidad)
+        for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
+            draw.text((x + dx, y + dy), texto, fill='white', font=font)
+        
+        # 8. Texto principal en AMARILLO NEÓN
         draw.text((x, y), texto, fill=(255, 255, 80), font=font)
         
+        # 9. Guardar
         img.save(salida)
-        print(f"✅ Miniatura mejorada creada: {salida}")
+        print(f"✅ Miniatura profesional creada: {salida}")
         return salida
     except Exception as e:
-        print(f"⚠️ Error creando miniatura: {e}")
+        print(f"⚠️ Error en miniatura profesional: {e}")
         return None
 
 # ================================================================
 # SUBTÍTULOS CON PIL (16:9) - TAMAÑO 28px
 # ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
-    """
-    Dibuja subtítulos sobre una imagen que YA DEBE ESTAR NORMALIZADA a 1280x720.
-    """
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
@@ -694,7 +691,7 @@ def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
         return None
 
 # ================================================================
-# MONTAR VIDEO (CON ORDEN CORREGIDO: normalizar → subtítulos)
+# MONTAR VIDEO (CON ORDEN CORREGIDO)
 # ================================================================
 def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitulos=None):
     if not recursos:
@@ -720,16 +717,16 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
             else:
                 img_path = img_url
             
-            # 🔥 PASO 1: Normalizar SIEMPRE a 1280x720 PRIMERO
+            # Normalizar PRIMERO
             img = Image.open(img_path)
             img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
             img.save(img_path)
             
-            # 🔥 PASO 2: Ahora agregar subtítulos sobre el lienzo ya normalizado
+            # Luego subtítulos
             img_sub_path = f"temp_largo_sub_{i}.jpg"
             img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
             
-            # Ken Burns (Zoom lento)
+            # Ken Burns
             video_clip = (ImageClip(img_path)
                          .resize(lambda t: 1 + 0.015 * t)
                          .set_duration(duracion))
@@ -764,7 +761,6 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     audio_narracion = concatenate_audioclips(audio_final_parts)
     duracion_total = audio_narracion.duration
     
-    # Concatenar videos
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
@@ -774,7 +770,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
         video = concatenate_videoclips([video, cta_clip], method="compose")
         duracion_total += 3
     
-    # Música de fondo
+    # Música
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -783,12 +779,9 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
                 fondo_clip = concatenate_audioclips([fondo_clip] * veces)
             fondo_clip = fondo_clip.subclip(0, duracion_total).volumex(0.05)
             audio_final = CompositeAudioClip([audio_narracion, fondo_clip])
-            print("🎵 Música de fondo agregada")
-        except Exception as e:
-            print(f"⚠️ Error con música: {e}")
+        except:
             audio_final = audio_narracion
     else:
-        print("ℹ️ Sin música de fondo")
         audio_final = audio_narracion
     
     video = video.set_audio(audio_final)
@@ -796,7 +789,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON DISCLAIMER)
+# SUBIR A YOUTUBE
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=None):
     try:
@@ -838,7 +831,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=N
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
             youtube.thumbnails().set(videoId=video_id, media_body=media_thumb).execute()
-            print("✅ Miniatura personalizada subida")
+            print("✅ Miniatura profesional subida")
         except Exception as e:
             print(f"⚠️ Error subiendo miniatura: {e}")
     
@@ -851,7 +844,7 @@ def limpiar_archivos_temporales():
     import glob
     patrones = [
         "temp_*.jpg", "temp_*.mp3", "audio_largo_*.mp3",
-        "temp_thumb.jpg", "miniatura_largo.jpg", "largo_capital.mp4",
+        "temp_thumb*.jpg", "miniatura_largo.jpg", "largo_capital.mp4",
         "placeholder*.jpg", "temp_*.png", "temp_capitulo_*.png",
         "temp_cta.png"
     ]
@@ -869,17 +862,14 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (VERSIÓN DEFINITIVA)")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (CON MINIATURAS PROFESIONALES)")
     print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura neón (sin personas, variada)")
-    print("   ✓ Capítulos visuales con PIL (14px)")
-    print("   ✓ Subtítulos con PIL (28px) - ORDEN CORREGIDO")
-    print("   ✓ CTA con PIL (40px)")
-    print("   ✓ Disclaimer en descripción")
-    print("   ✓ Expansión automática de guion si es corto")
-    print("   ✓ Números escritos con letras")
+    print("   ✓ Miniatura profesional (fondo Agnes + texto PIL)")
+    print("   ✓ Subtítulos 28px (orden corregido)")
+    print("   ✓ Capítulos 14px, CTA 40px")
+    print("   ✓ Prompt de miniatura generado por DeepSeek")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -904,6 +894,7 @@ def main():
     tags = guion["tags"]
     segmentos = guion["segmentos"]
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
+    prompt_miniatura = guion.get("prompt_miniatura", "")
     
     capitulos = []
     for seg in segmentos:
@@ -942,12 +933,12 @@ def main():
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4", capitulos)
     print(f"🎬 Video montado: {video_path}")
     
-    # Generar miniatura con variedad (evitando HOOK)
-    imagenes_para_miniatura = [rec["imagen_url"] for rec in recursos if rec.get("imagen_url")]
+    # 🔥 GENERAR MINIATURA PROFESIONAL
     miniatura_path = None
-    if imagenes_para_miniatura:
-        miniatura_path = crear_miniatura_personalizada(
-            imagenes_para_miniatura,
+    if prompt_miniatura:
+        print("🖼️ Generando miniatura profesional...")
+        miniatura_path = crear_miniatura_profesional(
+            prompt_miniatura,
             palabras_portada,
             "miniatura_largo.jpg"
         )
