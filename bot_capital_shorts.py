@@ -25,7 +25,7 @@ import edge_tts
 import pytz
 
 # ================================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN – CAMBIA AQUÍ TUS DATOS
 # ================================================================
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 AGNES_API_KEY = os.getenv("AGNES_API_KEY")
@@ -34,9 +34,14 @@ YOUTUBE_USER_TOKEN = (
     if os.getenv("YOUTUBE_USER_TOKEN_CAPITAL")
     else {}
 )
-NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"  # Tu API key de NewsAPI
-FACEBOOK_LINK = "https://www.facebook.com/tucapitaldigital"  # ⚠️ CAMBIA ESTO
-CANAL_LINK = "https://www.youtube.com/@CapitalDigital"       # ⚠️ CAMBIA ESTO
+NEWSAPI_KEY = "4b320804dea242198b35a93c9374ed6e"
+
+# ⚠️ CAMBIA ESTO POR TU CANAL REAL
+CANAL_LINK = "https://www.youtube.com/@CapitalDigitalInversiones"
+
+# ⚠️ SI NO TIENES FACEBOOK, DÉJALO VACÍO (NO APARECERÁ EN LA DESCRIPCIÓN)
+FACEBOOK_LINK = ""  # Déjalo vacío si no tienes página
+
 ESTADO_FILE = "estado_capital_shorts.json"
 TITULOS_FILE = "titulos_capital_shorts_publicados.json"
 META_DIARIA_SHORTS = 3
@@ -845,17 +850,20 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     if isinstance(etiquetas, str):
         etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
     
+    # Construir descripción (sin Facebook si no está configurado)
     descripcion = f"""{gancho}
 
 {contexto}
 
 🔴 SUSCRÍBETE al canal: {CANAL_LINK}
 
-📖 {fuente}
+📖 {fuente}"""
 
-📱 Síguenos en Facebook: {FACEBOOK_LINK}
+    # Solo agregar Facebook si hay enlace configurado
+    if FACEBOOK_LINK and FACEBOOK_LINK.strip():
+        descripcion += f"\n\n📱 Síguenos en Facebook: {FACEBOOK_LINK}"
 
-{hashtags}"""
+    descripcion += f"\n\n{hashtags}"
 
     if ACTIVAR_DISCLOSURE_IA:
         descripcion += "\n\n🤖 Este contenido ha sido generado con inteligencia artificial (relato e imágenes)."
