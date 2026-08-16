@@ -20,7 +20,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar dependencias
+      - name: Cache de pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Instalar dependencias (optimizado)
         run: |
           pip install --upgrade pip
           pip install "Pillow<10.0.0"
@@ -29,8 +37,10 @@ jobs:
           pip install edge-tts
           pip install json5
           pip install pytz
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          pip install numpy
+          # Instalar ffmpeg y fuentes mínimas
+          sudo apt-get update --fix-missing
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
 
       - name: Ejecutar bot de Largos
         env:
