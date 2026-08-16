@@ -78,7 +78,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# FUNCIONES DE ESTADO (iguales que antes)
+# FUNCIONES DE ESTADO
 # ================================================================
 def cargar_estado():
     try:
@@ -207,12 +207,12 @@ def obtener_tema_trending():
         return None
 
 # ================================================================
-# 🔥 EXPANSIÓN DE GUION LARGO (NUEVA FUNCIÓN)
+# EXPANSIÓN DE GUION LARGO
 # ================================================================
 def expandir_guion_largo(guion_corto, tema):
     prompt = f"""
 Eres un GUIONISTA PROFESIONAL. El siguiente guion es demasiado corto. 
-EXPÁNDELO a 1000-1200 palabras añadiendo:
+EXPÁNDELO a 1300-1500 palabras añadiendo:
 - Más ejemplos concretos.
 - Datos y estadísticas relevantes.
 - Analogías y comparaciones.
@@ -240,7 +240,7 @@ DEVUELVE SOLO EL TEXTO DEL GUION EXPANDIDO, con los mismos bloques [HOOK], [INTR
         r.raise_for_status()
         expanded = r.json()["choices"][0]["message"]["content"].strip()
         palabras = len(re.findall(r'\w+', expanded))
-        if palabras > 900:
+        if palabras > 1100:
             print(f"✅ Expansión exitosa: {palabras} palabras")
             return expanded
         else:
@@ -317,21 +317,29 @@ def generar_guion_largo(tipo):
         print(f"📌 Tema seleccionado: {tema_elegido}")
 
     prompt = f"""
-Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DETALLADO y EXTENSO para un video de YouTube de 7-8 minutos.
+Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DETALLADO y EXTENSO para un video de YouTube de 7-9 minutos.
 
 📌 TEMA: "{tema_elegido}"
 📌 TIPO: {tipo}
 
 🎯 REGLA DE ORO (CRÍTICA):
-El guion DEBE tener entre 1000 y 1200 palabras. Para lograrlo, desarrolla cada sección con EJEMPLOS CONCRETOS, DATOS, ANALOGÍAS y ANÉCDOTAS. No te limites a frases cortas.
+- El guion DEBE tener entre 1300 y 1500 palabras.
+- Si el guion tiene menos de 1200 palabras, el video será demasiado corto.
+- Cada bloque debe tener el largo indicado:
 
-🎯 ESTRUCTURA OBLIGATORIA (cada bloque debe tener ~150-200 palabras):
+🎯 ESTRUCTURA OBLIGATORIA:
 [HOOK - 0:00] Gancho de impacto (5-10 palabras).
-[INTRO - 0:15] Presenta el tema, el problema y lo que aprenderán. (150-200 palabras)
-[PROBLEMA - 1:00] Expón el dolor o la oportunidad con datos y ejemplos reales. (200-250 palabras)
-[DESARROLLO - 2:30] Análisis profundo, contexto, casos prácticos. (250-300 palabras)
-[SOLUCION - 4:30] Pasos concretos, estrategias accionables. (200-250 palabras)
-[CIERRE - 6:00] Resumen y CTA ("Suscríbete, dale like, comenta"). (150-200 palabras)
+[INTRO - 0:15] Presenta el tema, el problema y lo que aprenderán. (200-250 palabras)
+[PROBLEMA - 1:30] Expón el dolor o la oportunidad con datos y ejemplos reales. (250-300 palabras)
+[DESARROLLO - 3:00] Análisis profundo, contexto, casos prácticos. (300-350 palabras)
+[SOLUCION - 5:00] Pasos concretos, estrategias accionables. (250-300 palabras)
+[CIERRE - 7:00] Resumen y CTA ("Suscríbete, dale like, comenta"). (200-250 palabras)
+
+🎯 REGLA DE ORO PARA NÚMEROS:
+- NUNCA uses números con comas: "400,500" o "50,100" (se confunden).
+- SIEMPRE escribe los números con LETRAS: "cuatrocientos" en lugar de "400", "cincuenta" en lugar de "50".
+- Para rangos, usa "entre X y Y" en lugar de "X-Y".
+- Para cifras exactas, usa palabras: "mil" en lugar de "1000", "diez mil" en lugar de "10,000".
 
 🎯 INSTRUCCIONES ADICIONALES:
 - Usa un tono coloquial, como si hablaras con un amigo.
@@ -339,14 +347,11 @@ El guion DEBE tener entre 1000 y 1200 palabras. Para lograrlo, desarrolla cada s
 - NO uses fechas específicas.
 - Asegúrate de que CADA BLOQUE tenga el largo indicado.
 
-🎯 REGLAS SEO:
-- Título (60-70 chars): [EMOJI] + [KEYWORD] + [GANCHO]
-- Descripción con capítulos y hashtags.
-- Tags: 25-30 tags.
-- Palabras clave: 5 keywords.
-
 🎯 IMÁGENES (prompts en inglés):
-Cada bloque tendrá un prompt de imagen específico para Agnes (estilo cinematográfico, neón, 8k).
+Cada bloque tendrá un prompt de imagen específico para Agnes.
+- Estilo: cinematográfico, neón, 8k.
+- PROHIBIDO: personas, rostros, caras en primer plano.
+- Permitido: gráficos, monedas, datos, visualizaciones, mapas, tecnología.
 
 📤 RESPUESTA EN JSON:
 {{
@@ -356,14 +361,14 @@ Cada bloque tendrá un prompt de imagen específico para Agnes (estilo cinematog
     "descripcion": "Descripción completa con capítulos y hashtags",
     "tags": "25-30 tags separados por coma",
     "hashtags": "#hashtag1 #hashtag2",
-    "guion": "Guion completo de 1000-1200 palabras con los 6 bloques marcados",
+    "guion": "Guion completo de 1300-1500 palabras con los 6 bloques marcados",
     "segmentos": [
-        {{"bloque": "HOOK", "texto": "texto (~20 palabras)", "prompt_imagen": "prompt en inglés"}},
-        {{"bloque": "INTRO", "texto": "texto (~150 palabras)", "prompt_imagen": "prompt en inglés"}},
-        {{"bloque": "PROBLEMA", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés"}},
-        {{"bloque": "DESARROLLO", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés"}},
-        {{"bloque": "SOLUCION", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés"}},
-        {{"bloque": "CIERRE", "texto": "texto (~150 palabras)", "prompt_imagen": "prompt en inglés"}}
+        {{"bloque": "HOOK", "texto": "texto (~10 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "INTRO", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "PROBLEMA", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "DESARROLLO", "texto": "texto (~300 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "SOLUCION", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "CIERRE", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}}
     ],
     "palabras_portada": "2-3 palabras para miniatura"
 }}
@@ -393,7 +398,7 @@ Cada bloque tendrá un prompt de imagen específico para Agnes (estilo cinematog
             palabras = len(re.findall(r'\w+', guion_texto))
             print(f"📊 Palabras del guion: {palabras}")
             
-            if palabras < 900:
+            if palabras < 1100:
                 print(f"⚠️ Guion corto ({palabras} palabras). Expandiendo...")
                 guion_expandido = expandir_guion_largo(guion_texto, tema_elegido)
                 if guion_expandido:
@@ -403,7 +408,7 @@ Cada bloque tendrá un prompt de imagen específico para Agnes (estilo cinematog
                 else:
                     print("❌ Falló la expansión, usando guion original")
             
-            if palabras < 800:
+            if palabras < 900:
                 print(f"⚠️ Guion aún corto ({palabras} palabras). Reduciendo velocidad de voz a +5%.")
                 global VOZ_FIJA
                 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
@@ -452,9 +457,20 @@ def generar_imagen_horizontal(prompt, intentos=3):
     return None
 
 # ================================================================
-# MINIATURA MEJORADA
+# MINIATURA MEJORADA (SIN PERSONAS Y CON VARIEDAD)
 # ================================================================
-def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_largo.jpg"):
+def crear_miniatura_personalizada(imagenes_disponibles, texto_portada, salida="miniatura_largo.jpg"):
+    """
+    Selecciona una imagen aleatoria de las disponibles (excluyendo HOOK para evitar caras).
+    """
+    # Excluir imágenes de HOOK (primera) para evitar caras
+    imagenes_filtradas = [url for url in imagenes_disponibles if "hook" not in url.lower()]
+    if not imagenes_filtradas:
+        imagenes_filtradas = imagenes_disponibles
+    
+    imagen_url = random.choice(imagenes_filtradas)
+    print(f"🖼️ Miniatura seleccionada de: {imagen_url[:50]}...")
+    
     try:
         if imagen_url.startswith("http"):
             r = requests.get(imagen_url, timeout=30)
@@ -529,17 +545,17 @@ def crear_miniatura_personalizada(imagen_url, texto_portada, salida="miniatura_l
         return None
 
 # ================================================================
-# SUBTÍTULOS CON PIL (16:9)
+# SUBTÍTULOS CON PIL (16:9) - TAMAÑO REDUCIDO (28px)
 # ================================================================
 def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 55)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)  # 🔥 REDUCIDO 50%
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 55)
+                font = ImageFont.truetype("arial.ttf", 28)
             except:
                 font = ImageFont.load_default()
         
@@ -560,15 +576,14 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         else:
             lineas = [texto_sub]
         
-        y_base = 720 - 120 - (len(lineas) - 1) * 60
+        y_base = 720 - 80 - (len(lineas) - 1) * 35
         for i, linea in enumerate(lineas):
             bbox = draw.textbbox((0, 0), linea, font=font)
             ancho = bbox[2] - bbox[0]
             x = (1280 - ancho) // 2
-            y = y_base + i * 65
+            y = y_base + i * 35
             
-            draw.text((x+3, y+3), linea, fill='black', font=font)
-            draw.text((x+1, y+1), linea, fill='black', font=font)
+            draw.text((x+2, y+2), linea, fill='black', font=font)
             draw.text((x, y), linea, fill='white', font=font)
         
         img.save(salida_path)
@@ -578,7 +593,7 @@ def agregar_subtitulos_con_pil_16_9(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# GENERAR AUDIO (USA CONFIG_VOZ_ACTUAL)
+# GENERAR AUDIO
 # ================================================================
 def generar_audio(texto, index):
     global CONFIG_VOZ_ACTUAL
@@ -602,7 +617,7 @@ def generar_audio(texto, index):
         return None
 
 # ================================================================
-# CAPÍTULOS VISUALES CON PIL (SIN IMAGEMAGICK)
+# CAPÍTULOS VISUALES CON PIL (TAMAÑO REDUCIDO 14px)
 # ================================================================
 def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280, alto=720):
     try:
@@ -610,26 +625,26 @@ def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280
         draw = ImageDraw.Draw(img)
         texto = f"{timestamp} - {titulo_capitulo.upper()}"
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)  # 🔥 REDUCIDO 50%
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 28)
+                font = ImageFont.truetype("arial.ttf", 14)
             except:
                 font = ImageFont.load_default()
         bbox = draw.textbbox((0, 0), texto, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
-        x = 30
-        y = 30
-        padding = 15
+        x = 20
+        y = 15
+        padding = 8
         bg_x = x - padding
         bg_y = y - padding
         bg_w = text_w + padding * 2
         bg_h = text_h + padding * 2
         overlay = Image.new('RGBA', (ancho, alto), (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
-        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 180))
-        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], outline=(0, 180, 255, 100), width=2)
+        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 160))
+        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], outline=(0, 180, 255, 80), width=1)
         img = Image.alpha_composite(img, overlay)
         draw = ImageDraw.Draw(img)
         draw.text((x+1, y+1), texto, fill='black', font=font)
@@ -644,7 +659,7 @@ def crear_capitulo_visual_pil(titulo_capitulo, timestamp, duracion=3, ancho=1280
         return None
 
 # ================================================================
-# CTA FINAL "SUSCRÍBETE" CON PIL (SIN IMAGEMAGICK)
+# CTA FINAL "SUSCRÍBETE" CON PIL (TAMAÑO REDUCIDO 40px)
 # ================================================================
 def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
     try:
@@ -652,10 +667,10 @@ def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
         draw = ImageDraw.Draw(img)
         texto = "🔴 SUSCRÍBETE"
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 80)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40)  # 🔥 REDUCIDO 50%
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 80)
+                font = ImageFont.truetype("arial.ttf", 40)
             except:
                 font = ImageFont.load_default()
         bbox = draw.textbbox((0, 0), texto, font=font)
@@ -663,7 +678,7 @@ def crear_cta_final_pil(duracion=3, ancho=1280, alto=720):
         text_h = bbox[3] - bbox[1]
         x = (ancho - text_w) // 2
         y = (alto - text_h) // 2
-        for dx, dy in [(-3, -3), (-3, 3), (3, -3), (3, 3)]:
+        for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
         draw.text((x, y), texto, fill=(255, 50, 50), font=font)
         temp_path = "temp_cta.png"
@@ -853,12 +868,13 @@ def main():
     print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura neón")
-    print("   ✓ Capítulos visuales con PIL")
-    print("   ✓ CTA con PIL")
+    print("   ✓ Miniatura neón (sin personas)")
+    print("   ✓ Capítulos visuales con PIL (14px)")
+    print("   ✓ Subtítulos con PIL (28px)")
+    print("   ✓ CTA con PIL (40px)")
     print("   ✓ Disclaimer en descripción")
     print("   ✓ Expansión automática de guion si es corto")
-    print("   ✓ Velocidad de voz ajustable")
+    print("   ✓ Números escritos con letras")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -921,10 +937,12 @@ def main():
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4", capitulos)
     print(f"🎬 Video montado: {video_path}")
     
+    # 🔥 Generar miniatura con variedad (evitando HOOK)
+    imagenes_para_miniatura = [rec["imagen_url"] for rec in recursos if rec.get("imagen_url")]
     miniatura_path = None
-    if recursos and recursos[0].get("imagen_url"):
+    if imagenes_para_miniatura:
         miniatura_path = crear_miniatura_personalizada(
-            recursos[0]["imagen_url"],
+            imagenes_para_miniatura,
             palabras_portada,
             "miniatura_largo.jpg"
         )
