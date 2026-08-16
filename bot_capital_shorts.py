@@ -73,11 +73,21 @@ COLORES_NEON = [
 COLOR_NEON_ACTUAL = random.choice(COLORES_NEON)
 
 # ================================================================
-# HASHTAGS ESTRATÉGICOS
+# HASHTAGS ESTRATÉGICOS (ALTO VOLUMEN)
 # ================================================================
-HASHTAGS_ALTO_VOLUMEN = ["#Finanzas", "#Inversiones", "#Bitcoin", "#Economia", "#Oro", "#Bancos"]
-HASHTAGS_MEDIO_VOLUMEN = ["#CriptoHoy", "#OroInversion", "#EducacionFinanciera", "#MercadoFinanciero", "#Ahorros"]
-HASHTAGS_BAJO_VOLUMEN = ["#ETFMexico", "#SegurosDeVida", "#ExchangeSeguro", "#CrisisFinanciera", "#FinanzasPersonalesMX"]
+HASHTAGS_ALTO_VOLUMEN = [
+    "#Finanzas", "#Inversiones", "#Bitcoin", "#Economia", "#Oro", "#Bancos",
+    "#EducacionFinanciera", "#Trading", "#Ahorro", "#Deudas", "#Activos",
+    "#Criptomonedas", "#Forex", "#Acciones", "#Bolsa"
+]
+HASHTAGS_MEDIO_VOLUMEN = [
+    "#CriptoHoy", "#OroInversion", "#MercadoFinanciero", "#Ahorros",
+    "#InversionSegura", "#FinanzasPersonales", "#BitcoinTrading", "#ETFMexico"
+]
+HASHTAGS_BAJO_VOLUMEN = [
+    "#ExchangeSeguro", "#CrisisFinanciera", "#FinanzasPersonalesMX",
+    "#PlanificacionFinanciera", "#Riqueza", "#LibertadFinanciera"
+]
 
 # ================================================================
 # MÚSICA DE FONDO
@@ -285,46 +295,80 @@ def obtener_noticia_trending():
         return None
 
 # ================================================================
-# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (90-110 PALABRAS)
+# 🎯 GENERAR GUION CON ESTRUCTURA VIRAL (90-110 PALABRAS) Y SEO MEJORADO
 # ================================================================
 def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
+    # ================================================================
+    # 📌 NICHOS EDUCATIVOS (AHORRO, INVERSIÓN, DEUDAS, ACTIVOS, TRADING, ETC.)
+    # ================================================================
     NICHOS_EDUCATIVOS = [
-        "Inversiones en criptomonedas", "Estrategias para ahorrar e invertir",
-        "Conceptos básicos del mercado financiero", "Cómo funciona la bolsa de valores",
-        "Educación sobre seguros y protección financiera", "Análisis de activos: oro, acciones, bonos",
-        "Finanzas personales y presupuestos", "Tecnología financiera (fintech)",
-        "Planificación para el retiro", "Impuestos y declaraciones fiscales",
-        "Qué es el trading y cómo empezar", "Forex: el mercado de divisas",
-        "Cómo funcionan los ETFs", "Acciones vs. bonos: diferencias clave",
-        "Qué es la diversificación de cartera", "Cómo leer un estado financiero",
-        "Finanzas conductuales", "Qué es un fideicomiso",
-        "Cómo funciona el crowdfunding", "Inversiones sostenibles y ESG",
-        "Qué es el interés compuesto", "Cómo invertir en bienes raíces",
-        "El papel de los bancos centrales", "Inflación y poder adquisitivo",
-        "Qué son las criptomonedas estables", "Cómo funciona un exchange",
-        "Qué es un swap en finanzas", "Cómo protegerte de la inflación",
-        "Estrategias de inversión a largo plazo", "Análisis técnico vs. fundamental"
+        "Cómo ahorrar dinero y crear un fondo de emergencia",
+        "Estrategias para invertir en el mercado de valores",
+        "Dónde invertir tu dinero para obtener rendimientos",
+        "Cómo salir de deudas y mejorar tu historial crediticio",
+        "Qué son los activos y pasivos y cómo construirlos",
+        "Educación financiera para principiantes",
+        "Trading de criptomonedas: guía básica",
+        "Bitcoin: qué es y cómo invertir en él",
+        "Cómo funciona la bolsa de valores",
+        "Análisis de activos: oro, acciones, bonos",
+        "Finanzas personales y presupuestos",
+        "Tecnología financiera (fintech)",
+        "Planificación para el retiro",
+        "Impuestos y declaraciones fiscales",
+        "Qué es el interés compuesto",
+        "Cómo diversificar tu cartera de inversión",
+        "Cómo leer un estado financiero",
+        "Inversiones sostenibles y ESG",
+        "El papel de los bancos centrales",
+        "Inflación y poder adquisitivo",
+        "Qué son las criptomonedas estables (stablecoins)",
+        "Cómo funciona un exchange de criptomonedas",
+        "Qué es un swap en finanzas",
+        "Cómo protegerte de la inflación",
+        "Estrategias de inversión a largo plazo",
+        "Análisis técnico vs. fundamental",
+        "Cómo invertir en bienes raíces",
+        "Qué es un fideicomiso",
+        "Cómo funciona el crowdfunding",
+        "Finanzas conductuales"
     ]
     
     NICHOS_ESTAFAS = [
-        "Fraudes famosos en el mundo financiero", "Estafas con criptomonedas",
-        "Crisis bancarias y sus lecciones", "Escándalos corporativos",
-        "Estafas de inversión", "Casos de corrupción financiera",
-        "Colapsos bursátiles", "Estafas piramidales",
-        "Fraudes con seguros", "Manipulación del mercado",
-        "Estafa de las opciones binarias", "Fraude de las criptomonedas falsas",
-        "El colapso de los mercados emergentes", "Estafas de refinanciación",
-        "Fraudes con préstamos", "Esquemas Ponzi en la historia",
-        "Manipulación de la libra esterlina", "Estafas de las puntocom",
-        "Fraude de las hipotecas subprime", "Caso de la estafa de la minera de Bitcoin",
-        "El escándalo de las divisas", "Estafa de las acciones de centavo",
-        "Fraude de los seguros de vida", "Estafa de los fondos de inversión",
+        "El colapso de FTX",
+        "La estafa de OneCoin",
+        "Mt. Gox y el robo de Bitcoin",
+        "El fraude de Bernie Madoff",
+        "La crisis de las hipotecas subprime 2008",
+        "El escándalo de Enron",
+        "La estafa de QuadrigaCX",
+        "El caso de BitConnect",
+        "Fraude de Wirecard",
+        "Estafa de PwC y Bank of Credit",
+        "Caso de Olympus",
+        "Manipulación del mercado",
+        "Estafa de las opciones binarias",
+        "Fraude de las criptomonedas falsas",
+        "El colapso de los mercados emergentes",
+        "Estafas de refinanciación",
+        "Fraudes con préstamos",
+        "Esquemas Ponzi en la historia",
+        "Manipulación de la libra esterlina",
+        "Estafas de las puntocom",
+        "Fraude de las hipotecas subprime",
+        "Caso de la estafa de la minera de Bitcoin",
+        "El escándalo de las divisas",
+        "Estafa de las acciones de centavo",
+        "Fraude de los seguros de vida",
+        "Estafa de los fondos de inversión",
         "Caso de la estafa de las criptomonedas en México",
-        "Fraudes con tarjetas de crédito", "Estafas de los bienes raíces",
-        "El caso de la estafa de la energética", "Fraudes con las remesas",
+        "Fraudes con tarjetas de crédito",
+        "Estafas de los bienes raíces",
+        "El caso de la estafa de la energética",
+        "Fraudes con las remesas",
         "Estafas de las inversiones en arte"
     ]
 
@@ -360,7 +404,7 @@ def generar_guion_financiero(tipo):
     print(f"📌 Tema seleccionado: {tema_elegido}")
     print(f"📌 Tipo: {tipo.upper()}")
 
-    prompt = f"""Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
+    prompt = f"""Eres un EXPERTO EN FINANZAS, CREADOR DE CONTENIDO VIRAL Y ESPECIALISTA EN SEO PARA YOUTUBE SHORTS.
 
 📌 NICHO O TEMA BASE: "{tema_elegido}"
 📌 TIPO DE CONTENIDO: {tipo.upper()}
@@ -378,11 +422,24 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
    - [CIERRE] (1 oración con pregunta o CTA)
 3. Usa un tono coloquial, directo y cercano. Frases cortas y contundentes.
 
-🎯 REGLAS SEO:
-1. TÍTULO: 50-70 caracteres, con keyword al inicio.
-2. PALABRAS CLAVE: 2-3 términos de alto volumen.
-3. TAGS: 15-20 tags.
-4. PALABRAS PORTADA: 2-3 palabras.
+🎯 REGLAS SEO PARA MAXIMIZAR VISIBILIDAD (MUY IMPORTANTE):
+1. TÍTULO: 50-70 caracteres, con una PALABRA CLAVE PRINCIPAL al inicio.
+   - Ejemplos: "Bitcoin: cómo invertir sin arriesgar todo", "Deudas: cómo salir en 5 pasos", "Ahorro: el método que cambió mi vida"
+   - La palabra clave debe ser de alto volumen (ej. "Bitcoin", "Inversión", "Ahorro", "Deudas", "Trading", "Educación financiera").
+   - NO uses fechas ni años en el título (ej. 2024, 2025).
+
+2. PALABRAS CLAVE (2-3): Términos de alto volumen de búsqueda:
+   - Ejemplos: bitcoin, inversión, ahorro, deudas, trading, educación financiera, oro, forex, acciones, criptomonedas, finanzas personales, activos, pasivos.
+   - Asegúrate de que una de estas aparezca en el título y en los primeros tags.
+
+3. TAGS (15-20): Combina:
+   - Tags principales de alto volumen: bitcoin, finanzas, inversiones, ahorro, trading, educación financiera, oro, forex, acciones, criptomonedas.
+   - Tags long-tail: como invertir en bitcoin, que es el trading, como ahorrar dinero, como salir de deudas.
+   - Tags geográficos: méxico, latinoamérica, estados unidos.
+   - Tags de nicho: activos, pasivos, interés compuesto, diversificación.
+   - NO uses fechas ni años.
+
+4. PALABRAS PORTADA: 2-3 palabras de alto impacto (ej. "BITCOIN", "INVIERTE", "AHORRA", "DEUDAS", "TRADING", "EDUCA").
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
@@ -398,7 +455,7 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
     "fuente_relato": "Fuente del relato",
     "texto_completo": "Texto con los 5 bloques (90-110 palabras)",
     "palabras_portada": "2-3 palabras para miniatura",
-    "tags": "15-20 tags separados por coma"
+    "tags": "15-20 tags separados por coma (SIN fechas)"
 }}
 """
 
@@ -474,19 +531,25 @@ Desarrolla un relato corto y viral sobre este nicho. Puedes elegir un enfoque es
             if titulo_ya_publicado(titulo):
                 raise ValueError("Título duplicado")
 
+            # Hashtags estratégicos mejorados
             hashtag_alto = random.choice(HASHTAGS_ALTO_VOLUMEN)
             hashtag_medio = random.choice(HASHTAGS_MEDIO_VOLUMEN)
             hashtag_bajo = random.choice(HASHTAGS_BAJO_VOLUMEN)
             data["hashtags_descripcion"] = f"#Shorts {hashtag_alto} {hashtag_medio} {hashtag_bajo}"
 
+            # Tags mejorados: asegurar que no haya fechas
             tags_raw = data.get("tags", "")
             tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
+            # Eliminar tags que contengan años (2024, 2025, etc.)
+            tags_list = [t for t in tags_list if not re.search(r'\b20\d{2}\b', t)]
+            # Añadir keywords como tags
             for kw in keywords:
                 if kw.lower() not in [t.lower() for t in tags_list]:
                     tags_list.append(kw.lower())
-            extras = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges"]
+            # Añadir tags de alto volumen
+            extras = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges", "trading", "ahorro", "deudas", "educación financiera", "activos", "pasivos"]
             i = 0
-            while len(tags_list) < 12 and i < len(extras):
+            while len(tags_list) < 15 and i < len(extras):
                 if extras[i] not in tags_list:
                     tags_list.append(extras[i])
                 i += 1
@@ -1026,12 +1089,11 @@ def main():
     print("🎬 Capital Digital - Bot de SHORTS (Versión FINAL)")
     print("   ✓ Voz fija (Jorge) - velocidad +10%")
     print("   ✓ 90-110 palabras por video")
+    print("   ✓ Nuevos temas: ahorro, inversión, deudas, activos, trading, bitcoin, educación financiera")
+    print("   ✓ SEO mejorado (tags sin fechas, keywords de alto volumen)")
     print("   ✓ Sin miniatura personalizada")
     print("   ✓ Reutilización de imágenes")
-    print("   ✓ 30+ temas por categoría")
     print("   ✓ Rotación forzada: Noticia → Educativo → Estafa")
-    print("   ✓ Subtítulos con PIL (robusto)")
-    print("   ✓ Pausas de 15s entre segmentos")
     print("="*60)
     print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"🎤 Voz: {CONFIG_VOZ_ACTUAL['nombre']}")
