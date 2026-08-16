@@ -1,0 +1,46 @@
+name: Bot YouTube - Video Largo Capital Digital (1 al día)
+
+on:
+  schedule:
+    - cron: '0 21 * * *'   # 3:00 PM CDMX (21:00 UTC)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: |
+          pip install --upgrade pip
+          pip install "Pillow<10.0.0"
+          pip install moviepy==1.0.3
+          pip install requests google-auth google-api-python-client google-auth-oauthlib
+          pip install edge-tts
+          pip install json5
+          pip install pytz
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+
+      - name: Ejecutar bot de Largos
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          AGNES_API_KEY: ${{ secrets.AGNES_API_KEY }}
+          YOUTUBE_USER_TOKEN_CAPITAL: ${{ secrets.YOUTUBE_USER_TOKEN_CAPITAL }}
+        run: python bot_capital_largos.py
+
+      - name: Commit y push del estado
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Actualizar estado Capital Digital largos [skip ci]"
+          file_pattern: "estado_capital_largos.json titulos_capital_largos_publicados.json temas_largos_publicados.json"
