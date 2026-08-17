@@ -78,7 +78,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# FUNCIONES DE ESTADO
+# FUNCIONES DE ESTADO (iguales que antes)
 # ================================================================
 def cargar_estado():
     try:
@@ -251,6 +251,50 @@ DEVUELVE SOLO EL TEXTO DEL GUION EXPANDIDO, con los mismos bloques [HOOK], [INTR
         return None
 
 # ================================================================
+# SANITIZAR TAGS PARA YOUTUBE
+# ================================================================
+def sanitizar_tags(tags_str, max_chars=500):
+    """
+    Convierte una cadena de tags separados por coma en una lista válida para YouTube.
+    - Límite de 500 caracteres totales.
+    - Elimina caracteres no permitidos.
+    - Elimina tags duplicados y vacíos.
+    - Trunca si excede.
+    """
+    if not tags_str:
+        return []
+    
+    # Separar por coma y limpiar
+    raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
+    
+    # Limpiar caracteres no permitidos (solo letras, números, espacios, guiones)
+    cleaned_tags = []
+    for tag in raw_tags:
+        # Reemplazar caracteres especiales
+        clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
+        clean = clean.strip()
+        if clean and len(clean) > 1:  # mínimo 2 caracteres
+            cleaned_tags.append(clean)
+    
+    # Eliminar duplicados
+    cleaned_tags = list(dict.fromkeys(cleaned_tags))
+    
+    # Asegurar que no exceda 500 caracteres (contando comas)
+    current = ""
+    for tag in cleaned_tags:
+        if current:
+            test = current + "," + tag
+        else:
+            test = tag
+        if len(test) <= max_chars:
+            current = test
+        else:
+            break
+    
+    # Devolver como lista de strings
+    return current.split(",") if current else []
+
+# ================================================================
 # GENERAR GUION LARGO (CON PROMPT DE MINIATURA)
 # ================================================================
 def generar_guion_largo(tipo):
@@ -367,12 +411,16 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
     "titulo_alternativo": "Título alternativo",
     "palabras_clave": ["kw1", "kw2", "kw3", "kw4", "kw5"],
     "descripcion": "Descripción completa con capítulos y hashtags",
-    "tags": "25-30 tags separados por coma",
+    "tags": "25-30 tags separados por coma (SIN caracteres especiales, solo letras y espacios)",
     "hashtags": "#hashtag1 #hashtag2",
     "guion": "Guion completo de 1300-1500 palabras con los 6 bloques marcados",
     "segmentos": [
         {{"bloque": "HOOK", "texto": "texto (~10 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        ...
+        {{"bloque": "INTRO", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "PROBLEMA", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "DESARROLLO", "texto": "texto (~300 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "SOLUCION", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
+        {{"bloque": "CIERRE", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}}
     ],
     "palabras_portada": "2-3 palabras para el texto de la miniatura (ej. 'BITCOIN vs ORO', 'FOMO y PÁNICO', 'COLAPSO FTX')",
     "prompt_miniatura": "Prompt en inglés para el fondo de la miniatura (SIN texto, SIN personas, 1280x720)"
@@ -419,7 +467,7 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
                 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
                 CONFIG_VOZ_ACTUAL = VOZ_FIJA
             
-            # Asegurar que exista prompt_miniatura
+            # Asegurar prompt_miniatura
             if "prompt_miniatura" not in result:
                 result["prompt_miniatura"] = f"cinematic wide shot of financial data and glowing charts, neon cyan and magenta lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark"
             
@@ -431,9 +479,10 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
     sys.exit(1)
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL (16:9)
+# GENERAR IMAGEN HORIZONTAL (16:9) CON REINTENTOS
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
+    prompt = prompt[:950]  # truncar
     prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, electric cyan neon, high contrast, sharp focus, wide shot, environment as main subject, no close-up face, no text, no watermark"
     prompt_completo = prompt_completo[:950]
     
@@ -458,37 +507,45 @@ def generar_imagen_horizontal(prompt, intentos=3):
                 if data.get("data") and len(data["data"]) > 0:
                     return data["data"][0]["url"]
             else:
-                print(f"   ⚠️ Error {r.status_code}")
+                print(f"   ⚠️ Error {r.status_code} - {r.text[:100]}")
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(10 * (intento + 1))
+            time.sleep(15)
     return None
+
+# ================================================================
+# GENERAR FONDO SÓLIDO (fallback si falla placeholder)
+# ================================================================
+def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
+    """Genera una imagen de color sólido como fallback."""
+    img = Image.new('RGB', (ancho, alto), color)
+    path = f"temp_fondo_{random.randint(1000,9999)}.jpg"
+    img.save(path)
+    return path
 
 # ================================================================
 # MINIATURA PROFESIONAL (con prompt específico + texto PIL)
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo.jpg"):
-    """
-    Genera una miniatura profesional con:
-    - Fondo generado por Agnes usando prompt_miniatura (sin texto).
-    - Texto superpuesto con PIL (fuente Impact/Anton, borde, sombra, neón).
-    """
     try:
-        # 1. Generar fondo con Agnes usando el prompt específico
         prompt_completo = f"{prompt_miniatura}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark"
         fondo_url = generar_imagen_horizontal(prompt_completo, intentos=2)
         if not fondo_url:
             print("⚠️ No se pudo generar fondo, usando placeholder")
-            fondo_url = "https://via.placeholder.com/1280x720/1a1a3a/4a8af4?text=Capital+Digital"
+            fondo_path = generar_fondo_solido()
+            fondo_url = fondo_path
         
-        # 2. Descargar imagen
         if fondo_url.startswith("http"):
-            r = requests.get(fondo_url, timeout=30)
-            r.raise_for_status()
-            img_path = "temp_thumb_fondo.jpg"
-            with open(img_path, "wb") as f:
-                f.write(r.content)
+            try:
+                r = requests.get(fondo_url, timeout=30)
+                r.raise_for_status()
+                img_path = "temp_thumb_fondo.jpg"
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+            except:
+                fondo_path = generar_fondo_solido()
+                img_path = fondo_path
         else:
             img_path = fondo_url
         
@@ -496,18 +553,15 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
         draw = ImageDraw.Draw(img)
         
-        # 3. Texto de la miniatura
         texto = texto_portada.upper().strip()
-        # Limitar a 3 líneas máximo
         lineas = texto.split()
         if len(lineas) > 3:
             texto = ' '.join(lineas[:3])
         else:
             texto = ' '.join(lineas)
         
-        # 4. Cargar fuente (Intentar Anton, Impact, o Arial)
+        # Fuente
         try:
-            # Intentar Anton (descargar de Google Fonts y poner en /fonts)
             font = ImageFont.truetype("fonts/Anton.ttf", 100)
         except:
             try:
@@ -518,25 +572,21 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
                 except:
                     font = ImageFont.load_default()
         
-        # 5. Calcular posición centrada
         bbox = draw.textbbox((0, 0), texto, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         x = (1280 - text_w) // 2
-        y = (720 - text_h) // 2 + 60  # Ligeramente abajo del centro
+        y = (720 - text_h) // 2 + 60
         
-        # 6. Sombra gruesa (negra)
+        # Sombra
         for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4), (0, 6), (0, -6), (6, 0), (-6, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
-        
-        # 7. Borde blanco (opcional, para mejor legibilidad)
+        # Borde blanco
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
             draw.text((x + dx, y + dy), texto, fill='white', font=font)
-        
-        # 8. Texto principal en AMARILLO NEÓN
+        # Texto neón
         draw.text((x, y), texto, fill=(255, 255, 80), font=font)
         
-        # 9. Guardar
         img.save(salida)
         print(f"✅ Miniatura profesional creada: {salida}")
         return salida
@@ -709,32 +759,33 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
         
         try:
             if img_url.startswith("http"):
-                r = requests.get(img_url, timeout=30)
-                r.raise_for_status()
-                img_path = f"temp_largo_{i}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(r.content)
+                try:
+                    r = requests.get(img_url, timeout=30)
+                    r.raise_for_status()
+                    img_path = f"temp_largo_{i}.jpg"
+                    with open(img_path, "wb") as f:
+                        f.write(r.content)
+                except Exception as e:
+                    print(f"⚠️ Falló descarga de imagen {i}: {e}")
+                    img_path = generar_fondo_solido()
             else:
                 img_path = img_url
             
-            # Normalizar PRIMERO
             img = Image.open(img_path)
             img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
             img.save(img_path)
             
-            # Luego subtítulos
             img_sub_path = f"temp_largo_sub_{i}.jpg"
             img_path = agregar_subtitulos_con_pil_16_9(img_path, texto, img_sub_path)
             
-            # Ken Burns
             video_clip = (ImageClip(img_path)
                          .resize(lambda t: 1 + 0.015 * t)
                          .set_duration(duracion))
         except Exception as e:
             print(f"⚠️ Falló imagen {i}: {e}")
-            video_clip = ImageClip(np.zeros((720, 1280, 3), dtype=np.uint8) + 20, duration=duracion).set_fps(24)
+            img_path = generar_fondo_solido()
+            video_clip = ImageClip(img_path, duration=duracion).resize(lambda t: 1 + 0.015 * t)
         
-        # Capítulo visual
         if capitulos and i < len(capitulos):
             cap_titulo = capitulos[i].get("bloque", "")
             cap_timestamp = f"{i:02d}:00" if i < 10 else f"{i}:00"
@@ -764,13 +815,11 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
-    # CTA final
     cta_clip = crear_cta_final_pil(duracion=3)
     if cta_clip:
         video = concatenate_videoclips([video, cta_clip], method="compose")
         duracion_total += 3
     
-    # Música
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -789,9 +838,9 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE
+# SUBIR A YOUTUBE (CON SANITIZACIÓN DE TAGS)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=None):
+def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_path=None):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -799,8 +848,9 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=N
         print(f"❌ Error autenticando: {e}")
         sys.exit(1)
     
-    if isinstance(etiquetas, str):
-        etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
+    # Sanitizar tags
+    tags = sanitizar_tags(etiquetas_str)
+    print(f"📝 Tags sanitizados: {len(tags)} tags, {sum(len(t)+1 for t in tags)} caracteres aprox.")
     
     disclaimer = "\n\n⚠️ AVISO IMPORTANTE: Este contenido es solo para fines educativos no constituye asesoría financiera, legal o de inversión."
     descripcion_final = descripcion + disclaimer
@@ -809,7 +859,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, descripcion, miniatura_path=N
         "snippet": {
             "title": titulo[:100],
             "description": descripcion_final[:5000],
-            "tags": etiquetas[:30],
+            "tags": tags[:30],  # máximo 30 tags
             "categoryId": "27",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
@@ -846,7 +896,7 @@ def limpiar_archivos_temporales():
         "temp_*.jpg", "temp_*.mp3", "audio_largo_*.mp3",
         "temp_thumb*.jpg", "miniatura_largo.jpg", "largo_capital.mp4",
         "placeholder*.jpg", "temp_*.png", "temp_capitulo_*.png",
-        "temp_cta.png"
+        "temp_cta.png", "temp_fondo_*.jpg"
     ]
     for patron in patrones:
         for f in glob.glob(patron):
@@ -862,14 +912,15 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (CON MINIATURAS PROFESIONALES)")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (VERSIÓN DEFINITIVA)")
     print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
     print("   ✓ Miniatura profesional (fondo Agnes + texto PIL)")
     print("   ✓ Subtítulos 28px (orden corregido)")
     print("   ✓ Capítulos 14px, CTA 40px")
-    print("   ✓ Prompt de miniatura generado por DeepSeek")
+    print("   ✓ Tags sanitizados para YouTube")
+    print("   ✓ Fallback de imágenes con fondos sólidos")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -891,7 +942,7 @@ def main():
     guion, tema = generar_guion_largo(tipo)
     titulo = guion["titulo"]
     descripcion = guion["descripcion"]
-    tags = guion["tags"]
+    tags_str = guion.get("tags", "")
     segmentos = guion["segmentos"]
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
     prompt_miniatura = guion.get("prompt_miniatura", "")
@@ -904,9 +955,11 @@ def main():
     for idx, seg in enumerate(segmentos):
         print(f"🎬 Segmento {idx+1}/{len(segmentos)} - {seg.get('bloque', '')}")
         prompt_img = seg["prompt_imagen"]
-        img_url = generar_imagen_horizontal(prompt_img)
+        img_url = generar_imagen_horizontal(prompt_img, intentos=3)
         if not img_url:
-            img_url = "https://via.placeholder.com/1280x720/1a1a3a/4a8af4?text=Capital+Digital"
+            img_path = generar_fondo_solido()
+            img_url = img_path
+            print(f"   🖼️ Usando fondo sólido para segmento {idx+1}")
         
         audio_path = generar_audio(seg["texto"], idx)
         if not audio_path:
@@ -924,7 +977,7 @@ def main():
             "texto": seg["texto"],
             "bloque": seg.get("bloque", "")
         })
-        time.sleep(10)
+        time.sleep(15)  # pausa entre segmentos
     
     if not recursos:
         print("❌ No se generaron recursos.")
@@ -933,7 +986,6 @@ def main():
     video_path = montar_video_largo(recursos, fondo_path, "largo_capital.mp4", capitulos)
     print(f"🎬 Video montado: {video_path}")
     
-    # 🔥 GENERAR MINIATURA PROFESIONAL
     miniatura_path = None
     if prompt_miniatura:
         print("🖼️ Generando miniatura profesional...")
@@ -943,7 +995,7 @@ def main():
             "miniatura_largo.jpg"
         )
     
-    video_id = subir_a_youtube(video_path, titulo, tags, descripcion, miniatura_path)
+    video_id = subir_a_youtube(video_path, titulo, tags_str, descripcion, miniatura_path)
     
     guardar_titulo_publicado(titulo)
     guardar_tema_publicado(tema, tipo)
