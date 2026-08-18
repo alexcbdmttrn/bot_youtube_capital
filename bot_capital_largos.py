@@ -479,7 +479,64 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
     sys.exit(1)
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL (16:9) CON REINTENTOS
+# 🆕 FILTRAR PROMPT DE MINIATURA (eliminar palabras sensibles)
+# ================================================================
+def filtrar_prompt_miniatura(prompt):
+    """
+    Elimina palabras que suelen disparar el moderador de contenido de Agnes
+    en contextos financieros/de noticias, reemplazándolas con alternativas neutras.
+    """
+    if not prompt:
+        return prompt
+
+    # Palabras sensibles (case-insensitive, palabra completa)
+    palabras_sensibles = {
+        r'\bcrash\b': 'market drop',
+        r'\bcollapse\b': 'decline',
+        r'\bcollapsing\b': 'declining',
+        r'\bburning\b': 'glowing',
+        r'\bfire\b': 'bright light',
+        r'\bexplosion\b': 'burst',
+        r'\bexplosive\b': 'intense',
+        r'\bwreckage\b': 'ruins',
+        r'\bdestroyed\b': 'damaged',
+        r'\bdestruction\b': 'decay',
+        r'\bwar\b': 'conflict',
+        r'\bbattle\b': 'struggle',
+        r'\bblood\b': 'red',
+        r'\bwound\b': 'scar',
+        r'\bscam\b': 'deception',
+        r'\bfraud\b': 'fraudulent scheme',
+        r'\bvictim\b': 'affected person',
+        r'\bpanic\b': 'fear',
+        r'\bdisaster\b': 'crisis',
+        r'\bcatastrophe\b': 'tragedy',
+        r'\bcrisis\b': 'challenge',
+        r'\bdying\b': 'fading',
+        r'\bdeath\b': 'end',
+        r'\bdead\b': 'lifeless',
+        r'\bmurder\b': 'killing',
+        r'\bkill\b': 'eliminate',
+        r'\bgun\b': 'weapon',
+        r'\bweapon\b': 'tool',
+        r'\bexplode\b': 'burst',
+        r'\bexploded\b': 'burst',
+        r'\bsmoke\b': 'mist',
+        r'\bflames\b': 'light',
+    }
+
+    prompt_filtrado = prompt
+    for patron, reemplazo in palabras_sensibles.items():
+        prompt_filtrado = re.sub(patron, reemplazo, prompt_filtrado, flags=re.IGNORECASE)
+
+    # Si después de filtrar queda muy corto, usar prompt de respaldo genérico
+    if len(prompt_filtrado.split()) < 10:
+        return "cinematic wide shot of glowing financial charts and golden coins, neon cyan and gold lighting, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark"
+
+    return prompt_filtrado
+
+# ================================================================
+# GENERAR IMAGEN HORIZONTAL (16:9) CON REINTENTOS Y LOGGING
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
     prompt = prompt[:950]  # truncar
@@ -500,18 +557,22 @@ def generar_imagen_horizontal(prompt, intentos=3):
     }
     for intento in range(intentos):
         try:
-            print(f"   🖼️ Generando imagen {intento+1}/{intentos}...")
+            print(f"   🖼️ Enviando prompt a Agnes (intento {intento+1}/{intentos})...")
+            print(f"   📝 Prompt completo: {prompt_completo[:300]}...")
             r = requests.post(url, headers=headers, json=payload, timeout=120)
             if r.status_code == 200:
                 data = r.json()
                 if data.get("data") and len(data["data"]) > 0:
+                    print(f"   ✅ Imagen generada exitosamente en intento {intento+1}.")
                     return data["data"][0]["url"]
             else:
-                print(f"   ⚠️ Error {r.status_code} - {r.text[:100]}")
+                # Mostrar más del error para diagnóstico
+                print(f"   ⚠️ Error {r.status_code} - {r.text[:400]}")
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(15)
+            print("   ⏳ Esperando 10 segundos antes de reintentar...")
+            time.sleep(10)
     return None
 
 # ================================================================
@@ -528,14 +589,37 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
 # MINIATURA PROFESIONAL (con prompt específico + texto PIL)
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo.jpg"):
+    print("🖼️ Generando miniatura profesional...")
+
+    # 1. Filtrar prompt para evitar rechazo de moderación
+    prompt_filtrado = filtrar_prompt_miniatura(prompt_miniatura)
+    print(f"   📝 Prompt original: {prompt_miniatura[:200]}...")
+    print(f"   📝 Prompt filtrado: {prompt_filtrado[:200]}...")
+
+    # 2. Lista de prompts a intentar (orden de prioridad)
+    prompts_a_intentar = [
+        prompt_filtrado,
+        "cinematic wide shot of glowing financial charts and golden coins, neon cyan and gold lighting, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark",
+        "dramatic wide shot of stock market graphs and city skyline, blue and gold lighting, professional photography, sharp focus, no text, no watermark"
+    ]
+
+    fondo_url = None
+    for intento, prompt in enumerate(prompts_a_intentar[:3], start=1):
+        print(f"   🖼️ Intento {intento}/3 generando miniatura...")
+        fondo_url = generar_imagen_horizontal(prompt, intentos=1)  # solo 1 intento interno porque ya estamos en loop
+        if fondo_url:
+            break
+        if intento < 3:
+            print("   ⏳ Esperando 10 segundos antes del siguiente intento...")
+            time.sleep(10)
+
+    if not fondo_url:
+        print("⚠️ No se pudo generar fondo, usando placeholder")
+        fondo_path = generar_fondo_solido()
+        fondo_url = fondo_path
+
+    # Procesar imagen
     try:
-        prompt_completo = f"{prompt_miniatura}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark"
-        fondo_url = generar_imagen_horizontal(prompt_completo, intentos=2)
-        if not fondo_url:
-            print("⚠️ No se pudo generar fondo, usando placeholder")
-            fondo_path = generar_fondo_solido()
-            fondo_url = fondo_path
-        
         if fondo_url.startswith("http"):
             try:
                 r = requests.get(fondo_url, timeout=30)
@@ -543,7 +627,8 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
                 img_path = "temp_thumb_fondo.jpg"
                 with open(img_path, "wb") as f:
                     f.write(r.content)
-            except:
+            except Exception as e:
+                print(f"⚠️ Error descargando fondo: {e}")
                 fondo_path = generar_fondo_solido()
                 img_path = fondo_path
         else:
@@ -921,6 +1006,8 @@ def main():
     print("   ✓ Capítulos 14px, CTA 40px")
     print("   ✓ Tags sanitizados para YouTube")
     print("   ✓ Fallback de imágenes con fondos sólidos")
+    print("   ✓ Filtro de contenido para miniaturas (evita rechazo de Agnes)")
+    print("   ✓ 3 intentos con 10s de espera para imágenes")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
