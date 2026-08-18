@@ -48,7 +48,7 @@ VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nom
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
-# MÚSICA CORPORATE (igual que en largos)
+# MÚSICA CORPORATE
 # ================================================================
 FONDOS_DISPONIBLES = [
     "The Ascent.mp3",
@@ -210,7 +210,7 @@ def tema_ya_publicado(tema, dias=30):
     return False
 
 # ================================================================
-# TREND-JACKING: NOTICIAS DE NEWSAPI
+# TREND-JACKING
 # ================================================================
 def obtener_noticia_trending():
     try:
@@ -235,6 +235,41 @@ def obtener_noticia_trending():
     except Exception as e:
         print(f"⚠️ Error obteniendo noticia: {e}")
         return None
+
+# ================================================================
+# SANITIZAR TAGS PARA YOUTUBE
+# ================================================================
+def sanitizar_tags(tags_str, max_chars=500):
+    if not tags_str:
+        return []
+    raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
+    cleaned = []
+    for tag in raw_tags:
+        clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
+        clean = clean.strip()
+        if clean and len(clean) > 1:
+            cleaned.append(clean)
+    cleaned = list(dict.fromkeys(cleaned))
+    current = ""
+    for tag in cleaned:
+        if current:
+            test = current + "," + tag
+        else:
+            test = tag
+        if len(test) <= max_chars:
+            current = test
+        else:
+            break
+    return current.split(",") if current else []
+
+# ================================================================
+# GENERAR FONDO SÓLIDO (fallback)
+# ================================================================
+def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
+    img = Image.new('RGB', (ancho, alto), color)
+    path = f"temp_fondo_{random.randint(1000,9999)}.jpg"
+    img.save(path)
+    return path
 
 # ================================================================
 # EXPANSIÓN Y TRUNCAMIENTO DE TEXTO
@@ -285,7 +320,40 @@ def truncar_texto(texto):
     return truncado
 
 # ================================================================
-# GENERAR GUION (SHORTS) - CON PROMPT DE MINIATURA
+# EXTRAER BLOQUES (FALLBACK)
+# ================================================================
+def extraer_bloques(texto):
+    patron = r'\[GANCHO\](.*?)(?=\[DATOS\]|$)|\[DATOS\](.*?)(?=\[EXPLICACION\]|$)|\[EXPLICACION\](.*?)(?=\[SOLUCION\]|$)|\[SOLUCION\](.*?)(?=\[CIERRE\]|$)|\[CIERRE\](.*?)$'
+    matches = re.findall(patron, texto, re.DOTALL)
+    bloques = []
+    for grupo in matches:
+        for parte in grupo:
+            if parte and parte.strip():
+                bloques.append(parte.strip())
+    if len(bloques) == 5:
+        return bloques
+    oraciones = re.split(r'(?<=[.!?])\s+', texto)
+    if len(oraciones) >= 5:
+        chunk = len(oraciones) // 5
+        bloques = []
+        for i in range(5):
+            start = i * chunk
+            end = start + chunk if i < 4 else len(oraciones)
+            bloques.append(' '.join(oraciones[start:end]))
+        return bloques
+    palabras = texto.split()
+    if len(palabras) >= 5:
+        chunk = len(palabras) // 5
+        bloques = []
+        for i in range(5):
+            start = i * chunk
+            end = start + chunk if i < 4 else len(palabras)
+            bloques.append(' '.join(palabras[start:end]))
+        return bloques
+    return [texto]
+
+# ================================================================
+# GENERAR GUION (CON FALLBACK DE BLOQUES)
 # ================================================================
 def generar_guion_financiero(tipo):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
@@ -343,7 +411,7 @@ def generar_guion_financiero(tipo):
     elif tipo == "educativo":
         temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_EDUCATIVOS)
-    else:  # estafa
+    else:
         temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
         tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_ESTAFAS)
 
@@ -356,13 +424,13 @@ Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 📌 NICHO O TEMA BASE: "{tema_elegido}"
 📌 TIPO DE CONTENIDO: {tipo.upper()}
 
-🎯 REGLAS DE CONTENIDO VIRAL:
+🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
 1. Escribe OBLIGATORIAMENTE entre 90 y 110 palabras.
-2. Divide el texto en 5 BLOQUES:
-   - [GANCHO] (3-5 palabras)
-   - [DATOS] (1-2 oraciones)
-   - [EXPLICACION] (2-3 oraciones)
-   - [SOLUCION] (1-2 oraciones)
+2. Divide el texto en 5 BLOQUES OBLIGATORIOS. DEBES USAR EXACTAMENTE ESTAS ETIQUETAS:
+   - [GANCHO] (3-5 palabras, impacto máximo)
+   - [DATOS] (1-2 oraciones con el dato impactante)
+   - [EXPLICACION] (2-3 oraciones desarrollando el tema)
+   - [SOLUCION] (1-2 oraciones con la moraleja)
    - [CIERRE] (1 oración con pregunta o CTA)
 3. Tono coloquial, directo.
 4. Números escritos con LETRAS (no "400,500").
@@ -404,7 +472,7 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
+        "temperature": 0.8,
         "max_tokens": 1200,
         "response_format": {"type": "json_object"}
     }
@@ -430,7 +498,15 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
 
             texto = data.get("texto_completo", "")
             if not all(marker in texto for marker in ["[GANCHO]", "[DATOS]", "[EXPLICACION]", "[SOLUCION]", "[CIERRE]"]):
-                raise ValueError("Faltan bloques obligatorios")
+                print("   ⚠️ No se encontraron bloques. Extrayendo manualmente...")
+                bloques = extraer_bloques(texto)
+                if len(bloques) == 5:
+                    texto_reconstruido = f"[GANCHO] {bloques[0]}\n[DATOS] {bloques[1]}\n[EXPLICACION] {bloques[2]}\n[SOLUCION] {bloques[3]}\n[CIERRE] {bloques[4]}"
+                    data["texto_completo"] = texto_reconstruido
+                    texto = texto_reconstruido
+                    print("   ✅ Bloques reconstruidos manualmente.")
+                else:
+                    raise ValueError("No se pudieron extraer bloques")
 
             palabras = len(re.findall(r'\w+', texto))
             print(f"   📊 Palabras generadas: {palabras}")
@@ -477,20 +553,16 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
             data["hashtags_descripcion"] = f"#Shorts {hashtag_alto} {hashtag_medio} {hashtag_bajo}"
 
             tags_raw = data.get("tags", "")
-            tags_list = [t.strip() for t in tags_raw.split(",") if t.strip()]
-            tags_list = [t for t in tags_list if not re.search(r'\b20\d{2}\b', t)]
+            tags_list = sanitizar_tags(tags_raw)
             for kw in keywords:
                 if kw.lower() not in [t.lower() for t in tags_list]:
                     tags_list.append(kw.lower())
             extras = ["finanzas", "inversiones", "economia", "bitcoin", "oro", "bancos", "seguros", "exchanges"]
-            i = 0
-            while len(tags_list) < 12 and i < len(extras):
-                if extras[i] not in tags_list:
-                    tags_list.append(extras[i])
-                i += 1
+            for extra in extras:
+                if len(tags_list) < 20 and extra not in tags_list:
+                    tags_list.append(extra)
             data["tags"] = ", ".join(tags_list[:20])
 
-            # Asegurar prompt_miniatura
             if "prompt_miniatura" not in data or not data["prompt_miniatura"]:
                 data["prompt_miniatura"] = f"cinematic wide shot of financial data and glowing charts, neon cyan and magenta lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark"
 
@@ -502,7 +574,7 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
-                time.sleep(10 + intento * 3)
+                time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
 
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
@@ -572,7 +644,7 @@ def asignar_etapas_visuales(segmentos):
     return etapas, ubicaciones
 
 # ================================================================
-# GENERAR PROMPT DE IMAGEN (REAL+NEÓN)
+# GENERAR PROMPT DE IMAGEN
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
                                    segmento_anterior_texto=None,
@@ -652,7 +724,7 @@ Return ONLY the English prompt, no explanations.
         return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
 
 # ================================================================
-# GENERAR IMAGEN CON AGNES (VERTICAL)
+# GENERAR IMAGEN VERTICAL (CON PAUSA DE 10s)
 # ================================================================
 def generar_imagen_vertical(prompt, intentos=3):
     prompt = re.sub(r"\n+", " ", prompt).strip()
@@ -700,11 +772,11 @@ def generar_imagen_vertical(prompt, intentos=3):
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(10 * (intento + 1))
+            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
     return None
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL PARA MINIATURA (1280x720)
+# GENERAR IMAGEN HORIZONTAL PARA MINIATURA (CON PAUSA DE 10s)
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
     prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark"
@@ -735,11 +807,11 @@ def generar_imagen_horizontal(prompt, intentos=3):
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(10 * (intento + 1))
+            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
     return None
 
 # ================================================================
-# GENERAR AUDIO
+# GENERAR AUDIO (CON PAUSA DE 10s)
 # ================================================================
 def generar_audio(texto, index, intentos_por_voz=2):
     global CONFIG_VOZ_ACTUAL
@@ -761,14 +833,14 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 return filename
         except Exception as e:
             print(f"   ❌ Falló voz {voz}: {e}")
-        time.sleep(5)
+        time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
         if os.path.exists(filename):
             try: os.remove(filename)
             except: pass
     return None
 
 # ================================================================
-# GENERAR RECURSOS POR SEGMENTO (CON REUTILIZACIÓN)
+# GENERAR RECURSOS POR SEGMENTO (CON PAUSA DE 10s)
 # ================================================================
 def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, intentos_imagen=3):
     recursos = []
@@ -794,7 +866,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
                 print(f"    ✅ Imagen generada (intento {intento+1})")
                 last_successful_url = img_url
                 break
-            time.sleep(8)
+            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS DE IMAGEN
         
         if not img_url:
             if last_successful_url:
@@ -802,17 +874,19 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
                 img_url = last_successful_url
             else:
                 print(f"    ⚠️ No hay imagen previa. Reintentando...")
-                time.sleep(15)
+                time.sleep(10)
                 img_url = generar_imagen_vertical(prompt_img, intentos=1)
                 if img_url:
                     last_successful_url = img_url
                 else:
-                    print(f"    ❌ Falló definitivamente, usando placeholder")
-                    img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
+                    print(f"    ❌ Falló definitivamente, usando fondo sólido")
+                    img_path = generar_fondo_solido(color=(20, 20, 50), ancho=1080, alto=1920)
+                    img_url = img_path
                     last_successful_url = img_url
         
         if not img_url:
-            img_url = "https://via.placeholder.com/1080x1920/1a1a3a/4a8af4?text=Capital+Digital"
+            img_path = generar_fondo_solido(color=(20, 20, 50), ancho=1080, alto=1920)
+            img_url = img_path
             last_successful_url = img_url
         
         audio_path = generar_audio(seg, idx)
@@ -833,16 +907,15 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         })
         
         if idx < total - 1:
-            print(f"   ⏳ Esperando 15 segundos...")
-            time.sleep(15)
+            print(f"   ⏳ Esperando 10 segundos...")
+            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE SEGMENTOS
     
     return recursos
 
 # ================================================================
-# SUBTÍTULOS CON PIL (VERTICAL - 1080x1920) - TAMAÑO 50px
+# SUBTÍTULOS CON PIL (VERTICAL)
 # ================================================================
 def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
-    """Agrega subtítulos sobre una imagen que YA DEBE ESTAR NORMALIZADA a 1080x1920."""
     try:
         img = Image.open(imagen_path)
         draw = ImageDraw.Draw(img)
@@ -884,7 +957,6 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
             x = (1080 - ancho) // 2
             y = y_base + i * 60
             
-            # Fondo oscuro detrás del texto
             padding = 15
             bg_x = x - padding
             bg_y = y - padding
@@ -903,30 +975,27 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# MINIATURA PROFESIONAL PARA SHORTS
+# MINIATURA PROFESIONAL PARA SHORTS (CON FALLBACK DE FONDO SÓLIDO)
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_short.jpg"):
-    """
-    Genera una miniatura profesional para Shorts:
-    - Fondo generado por Agnes usando prompt_miniatura (sin texto).
-    - Texto superpuesto con PIL (fuente Impact/Anton, borde, sombra, neón).
-    - Tamaño: 1280x720 (horizontal, formato estándar de YouTube).
-    """
     try:
-        # 1. Generar fondo con Agnes usando el prompt específico
         print("🖼️ Generando fondo de miniatura...")
         fondo_url = generar_imagen_horizontal(prompt_miniatura, intentos=2)
         if not fondo_url:
-            print("⚠️ No se pudo generar fondo, usando placeholder")
-            fondo_url = "https://via.placeholder.com/1280x720/1a1a3a/4a8af4?text=Capital+Digital"
+            print("⚠️ No se pudo generar fondo, usando fondo sólido")
+            fondo_path = generar_fondo_solido()
+            fondo_url = fondo_path
         
-        # 2. Descargar imagen
         if fondo_url.startswith("http"):
-            r = requests.get(fondo_url, timeout=30)
-            r.raise_for_status()
-            img_path = "temp_thumb_fondo_short.jpg"
-            with open(img_path, "wb") as f:
-                f.write(r.content)
+            try:
+                r = requests.get(fondo_url, timeout=30)
+                r.raise_for_status()
+                img_path = "temp_thumb_fondo_short.jpg"
+                with open(img_path, "wb") as f:
+                    f.write(r.content)
+            except Exception as e:
+                print(f"⚠️ Error descargando fondo: {e}. Usando fondo sólido.")
+                img_path = generar_fondo_solido()
         else:
             img_path = fondo_url
         
@@ -934,7 +1003,6 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         img = ImageOps.fit(img, (1280, 720), Image.Resampling.LANCZOS)
         draw = ImageDraw.Draw(img)
         
-        # 3. Texto de la miniatura
         texto = texto_portada.upper().strip()
         lineas = texto.split()
         if len(lineas) > 3:
@@ -942,7 +1010,6 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         else:
             texto = ' '.join(lineas)
         
-        # 4. Cargar fuente (Intentar Anton, Impact, o Arial)
         try:
             font = ImageFont.truetype("fonts/Anton.ttf", 100)
         except:
@@ -954,25 +1021,18 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
                 except:
                     font = ImageFont.load_default()
         
-        # 5. Calcular posición centrada
         bbox = draw.textbbox((0, 0), texto, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         x = (1280 - text_w) // 2
-        y = (720 - text_h) // 2 + 60  # Ligeramente abajo del centro
+        y = (720 - text_h) // 2 + 60
         
-        # 6. Sombra gruesa (negra)
         for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4), (0, 6), (0, -6), (6, 0), (-6, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
-        
-        # 7. Borde blanco (opcional)
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
             draw.text((x + dx, y + dy), texto, fill='white', font=font)
-        
-        # 8. Texto principal en AMARILLO NEÓN
         draw.text((x, y), texto, fill=(255, 255, 80), font=font)
         
-        # 9. Guardar
         img.save(salida)
         print(f"✅ Miniatura profesional para Short creada: {salida}")
         return salida
@@ -981,7 +1041,7 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         return None
 
 # ================================================================
-# MONTAR VIDEO SHORTS (CON ORDEN CORREGIDO: normalizar → subtítulos)
+# MONTAR VIDEO SHORTS (CON ORDEN CORREGIDO)
 # ================================================================
 def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     if not recursos:
@@ -998,30 +1058,31 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
         
         try:
             if img_url.startswith("http"):
-                r = requests.get(img_url, timeout=30)
-                r.raise_for_status()
-                img_path = f"temp_short_{i}.jpg"
-                with open(img_path, "wb") as f:
-                    f.write(r.content)
+                try:
+                    r = requests.get(img_url, timeout=30)
+                    r.raise_for_status()
+                    img_path = f"temp_short_{i}.jpg"
+                    with open(img_path, "wb") as f:
+                        f.write(r.content)
+                except:
+                    img_path = generar_fondo_solido(color=(20, 20, 50), ancho=1080, alto=1920)
             else:
                 img_path = img_url
             
-            # 🔥 PASO 1: Normalizar a 1080x1920 PRIMERO
             img = Image.open(img_path)
             img = ImageOps.fit(img, (1080, 1920), Image.Resampling.LANCZOS)
             img.save(img_path)
             
-            # 🔥 PASO 2: Agregar subtítulos sobre el lienzo ya normalizado
             img_sub_path = f"temp_short_sub_{i}.jpg"
             img_path = agregar_subtitulos_con_pil(img_path, texto, img_sub_path)
             
-            # Ken Burns (Zoom)
             video_clip = (ImageClip(img_path)
                          .resize(lambda t: 1 + 0.02 * t)
                          .set_duration(duracion))
         except Exception as e:
             print(f"⚠️ Falló imagen {i}: {e}")
-            video_clip = ImageClip(np.zeros((1920, 1080, 3), dtype=np.uint8) + 20, duration=duracion).set_fps(24)
+            img_path = generar_fondo_solido(color=(20, 20, 50), ancho=1080, alto=1920)
+            video_clip = ImageClip(img_path, duration=duracion).resize(lambda t: 1 + 0.02 * t)
         
         clips_video.append(video_clip)
         
@@ -1042,11 +1103,9 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     audio_narracion = concatenate_audioclips(audio_final_parts)
     duracion_total = audio_narracion.duration
     
-    # Concatenar con fade
     video = concatenate_videoclips(clips_video, method="compose")
     video = video.set_duration(duracion_total)
     
-    # Música
     if fondo_path and os.path.exists(fondo_path):
         try:
             fondo_clip = AudioFileClip(fondo_path)
@@ -1066,7 +1125,6 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     video.close()
     audio_final.close()
     
-    # Limpiar temporales
     for f in os.listdir("."):
         if f.startswith("temp_short_") and f.endswith(".jpg"):
             try: os.remove(f)
@@ -1075,9 +1133,9 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON MINIATURA PROFESIONAL Y DISCLAIMER)
+# SUBIR A YOUTUBE (CON SANITIZACIÓN DE TAGS)
 # ================================================================
-def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, fuente="", miniatura_path=None):
+def subir_a_youtube(video_path, titulo, etiquetas_str, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
         creds = Credentials.from_authorized_user_info(YOUTUBE_USER_TOKEN)
         youtube = build("youtube", "v3", credentials=creds)
@@ -1085,8 +1143,8 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
         print(f"❌ Error autenticando: {e}")
         sys.exit(1)
     
-    if isinstance(etiquetas, str):
-        etiquetas = [t.strip() for t in etiquetas.split(",") if t.strip()]
+    tags = sanitizar_tags(etiquetas_str)
+    print(f"📝 Tags sanitizados: {len(tags)} tags")
     
     descripcion = f"""{gancho}
 
@@ -1104,7 +1162,7 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
         "snippet": {
             "title": titulo[:100],
             "description": descripcion[:5000],
-            "tags": etiquetas[:30],
+            "tags": tags[:30],
             "categoryId": "27",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
@@ -1122,7 +1180,6 @@ def subir_a_youtube(video_path, titulo, etiquetas, gancho, contexto, hashtags, f
     video_id = response["id"]
     print(f"✅ Short subido: https://youtu.be/{video_id}")
     
-    # Subir miniatura profesional
     if miniatura_path and os.path.exists(miniatura_path):
         try:
             media_thumb = MediaFileUpload(miniatura_path, chunksize=-1, resumable=True)
@@ -1140,7 +1197,8 @@ def limpiar_archivos_temporales():
     import glob
     patrones = [
         "temp_*.jpg", "audio_short_*.mp3", "temp_thumb*.jpg",
-        "miniatura_short.jpg", "short_capital.mp4", "placeholder*.jpg"
+        "miniatura_short.jpg", "short_capital.mp4", "placeholder*.jpg",
+        "temp_fondo_*.jpg"
     ]
     for patron in patrones:
         for f in glob.glob(patron):
@@ -1156,13 +1214,15 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de SHORTS (CON MINIATURAS PROFESIONALES)")
+    print("🎬 Capital Digital - Bot de SHORTS (VERSIÓN DEFINITIVA)")
     print("   ✓ Música Corporate/Tech")
     print("   ✓ Ken Burns (Zoom)")
     print("   ✓ Transiciones Fade")
     print("   ✓ Miniatura profesional (fondo Agnes + texto PIL)")
     print("   ✓ Subtítulos 50px (orden corregido)")
-    print("   ✓ Prompt de miniatura generado por DeepSeek")
+    print("   ✓ Fallback de bloques en guion")
+    print("   ✓ Tags sanitizados")
+    print("   ✓ Pausas de 10 segundos entre generaciones")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -1174,7 +1234,6 @@ def main():
         print(f"✅ Ya se publicaron {META_DIARIA_SHORTS} shorts hoy. Saliendo.")
         sys.exit(0)
     
-    # Rotación forzada
     if publicadas == 0:
         tipo = "noticia"
     elif publicadas == 1:
@@ -1208,7 +1267,6 @@ def main():
     video_path = montar_video_shorts(recursos, fondo_path, "short_capital.mp4")
     print(f"🎬 Video montado: {video_path}")
     
-    # 🔥 GENERAR MINIATURA PROFESIONAL
     miniatura_path = None
     if prompt_miniatura:
         print("🖼️ Generando miniatura profesional para Short...")
@@ -1221,7 +1279,7 @@ def main():
     video_id = subir_a_youtube(
         video_path=video_path,
         titulo=guion["titulo"],
-        etiquetas=guion["tags"],
+        etiquetas_str=guion["tags"],
         gancho=guion["gancho_descripcion"],
         contexto=guion["contexto_descripcion"],
         hashtags=guion["hashtags_descripcion"],
