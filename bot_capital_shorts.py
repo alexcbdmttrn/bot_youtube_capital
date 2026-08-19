@@ -42,9 +42,9 @@ META_DIARIA_SHORTS = 3
 DIAS_SIN_REPETIR_TEMA = 30
 
 # ================================================================
-# VOZ FIJA (Jorge)
+# VOZ FIJA (Jorge) - +10% para ritmo dinámico
 # ================================================================
-VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+8%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
+VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
 
 # ================================================================
@@ -77,7 +77,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# PALETAS Y ESTILOS VISUALES
+# PALETAS Y ESTILOS VISUALES (neón + alto contraste)
 # ================================================================
 PALETAS_BASE = [
     "Corporate blue and silver, modern office",
@@ -272,6 +272,67 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
     return path
 
 # ================================================================
+# 🔥 GENERACIÓN DE IDEAS (Restricción/Desafío/Transformación)
+# ================================================================
+def generar_idea_video(tipo):
+    """
+    Genera 5 ideas de video con restricción, desafío o transformación
+    y elige la que genera más curiosidad.
+    """
+    prompt = f"""
+Eres un ESTRATEGA DE CONTENIDO VIRAL para YouTube en el nicho de finanzas/cripto.
+
+Tu tarea es generar 5 IDEAS DE VIDEO que sigan estos principios:
+1. RESTRICCIÓN: El creador se impone una limitación (ej. "invertir solo $100").
+2. DESAFÍO: Objetivo medible (ej. "llegar a $10,000 en 30 días").
+3. TRANSFORMACIÓN: Antes y después (ej. "de deudas a inversor").
+
+TIPO DE CONTENIDO: {tipo} (educativo, estafa, psicologia, analisis, noticia)
+
+Para cada idea, escribe:
+- Título (60-70 caracteres, con emoji y keyword al inicio).
+- Descripción de 1-2 líneas explicando la restricción/desafío.
+- Nivel de curiosidad (1-10).
+
+Luego ELIGE LA MEJOR IDEA (la que genera más curiosidad) y devuélvela.
+
+RESPUESTA EN JSON:
+{{
+    "mejor_idea": {{
+        "titulo": "Título final con curiosidad",
+        "descripcion": "Descripción de la idea",
+        "restriccion": "Cuál es la restricción o desafío",
+        "tipo": "{tipo}"
+    }},
+    "ideas_generadas": [
+        {{"titulo": "...", "descripcion": "...", "curiosidad": 8}},
+        ...
+    ]
+}}
+"""
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.8,
+        "max_tokens": 1000,
+        "response_format": {"type": "json_object"}
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        inicio = content.find("{")
+        fin = content.rfind("}")
+        json_str = content[inicio:fin+1]
+        return json.loads(json_str)
+    except Exception as e:
+        print(f"⚠️ Error generando ideas: {e}")
+        return None
+
+# ================================================================
 # EXPANSIÓN Y TRUNCAMIENTO DE TEXTO
 # ================================================================
 def expandir_texto_corto(texto_corto, tema):
@@ -353,107 +414,67 @@ def extraer_bloques(texto):
     return [texto]
 
 # ================================================================
-# GENERAR GUION (CON FALLBACK DE BLOQUES)
+# 🔥 GENERAR GUION (CON ESTRUCTURA DE DESAFÍO Y CURIOSIDAD)
 # ================================================================
-def generar_guion_financiero(tipo):
+def generar_guion_financiero(tipo, idea=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    NICHOS_EDUCATIVOS = [
-        "Inversiones en criptomonedas", "Estrategias para ahorrar e invertir",
-        "Conceptos básicos del mercado financiero", "Cómo funciona la bolsa de valores",
-        "Educación sobre seguros y protección financiera", "Análisis de activos: oro, acciones, bonos",
-        "Finanzas personales y presupuestos", "Tecnología financiera (fintech)",
-        "Planificación para el retiro", "Impuestos y declaraciones fiscales",
-        "Qué es el trading y cómo empezar", "Forex: el mercado de divisas",
-        "Cómo funcionan los ETFs", "Acciones vs. bonos: diferencias clave",
-        "Qué es la diversificación de cartera", "Cómo leer un estado financiero",
-        "Finanzas conductuales", "Qué es un fideicomiso",
-        "Cómo funciona el crowdfunding", "Inversiones sostenibles y ESG",
-        "Qué es el interés compuesto", "Cómo invertir en bienes raíces",
-        "El papel de los bancos centrales", "Inflación y poder adquisitivo",
-        "Qué son las criptomonedas estables", "Cómo funciona un exchange",
-        "Qué es un swap en finanzas", "Cómo protegerte de la inflación",
-        "Estrategias de inversión a largo plazo", "Análisis técnico vs. fundamental"
-    ]
-    
-    NICHOS_ESTAFAS = [
-        "Fraudes famosos en el mundo financiero", "Estafas con criptomonedas",
-        "Crisis bancarias y sus lecciones", "Escándalos corporativos",
-        "Estafas de inversión", "Casos de corrupción financiera",
-        "Colapsos bursátiles", "Estafas piramidales",
-        "Fraudes con seguros", "Manipulación del mercado",
-        "Estafa de las opciones binarias", "Fraude de las criptomonedas falsas",
-        "El colapso de los mercados emergentes", "Estafas de refinanciación",
-        "Fraudes con préstamos", "Esquemas Ponzi en la historia",
-        "Manipulación de la libra esterlina", "Estafas de las puntocom",
-        "Fraude de las hipotecas subprime", "Caso de la estafa de la minera de Bitcoin",
-        "El escándalo de las divisas", "Estafa de las acciones de centavo",
-        "Fraude de los seguros de vida", "Estafa de los fondos de inversión",
-        "Caso de la estafa de las criptomonedas en México",
-        "Fraudes con tarjetas de crédito", "Estafas de los bienes raíces",
-        "El caso de la estafa de la energética", "Fraudes con las remesas",
-        "Estafas de las inversiones en arte"
-    ]
-
-    tema_elegido = None
-    
-    if tipo == "noticia":
-        noticia_trending = obtener_noticia_trending()
-        if noticia_trending and not tema_ya_publicado(noticia_trending, DIAS_SIN_REPETIR_TEMA):
-            tema_elegido = noticia_trending[:100]
-            print(f"📰 Noticia en tiempo real: {tema_elegido}")
+    # Si no hay idea, generar una
+    if not idea:
+        print("💡 Generando idea con restricción/desafío...")
+        idea_data = generar_idea_video(tipo)
+        if idea_data and "mejor_idea" in idea_data:
+            idea = idea_data["mejor_idea"]
+            print(f"   Idea seleccionada: {idea['titulo']}")
+            print(f"   Restricción: {idea['restriccion']}")
         else:
-            print("⚠️ Noticia ya usada o no disponible. Usando nicho educativo...")
-            tipo = "educativo"
-            temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
-            tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_EDUCATIVOS)
-    elif tipo == "educativo":
-        temas_disponibles = [n for n in NICHOS_EDUCATIVOS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
-        tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_EDUCATIVOS)
-    else:
-        temas_disponibles = [n for n in NICHOS_ESTAFAS if not tema_ya_publicado(n, DIAS_SIN_REPETIR_TEMA)]
-        tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(NICHOS_ESTAFAS)
+            # Fallback a tema aleatorio
+            print("⚠️ No se generó idea, usando tema aleatorio.")
+            idea = {"titulo": "Inversiones en criptomonedas", "restriccion": "Invertir con poco capital"}
 
-    print(f"📌 Tema seleccionado: {tema_elegido}")
-    print(f"📌 Tipo: {tipo.upper()}")
+    tema_elegido = idea["titulo"]
+    restriccion = idea.get("restriccion", "Desafío financiero")
 
     prompt = f"""
 Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 
-📌 NICHO O TEMA BASE: "{tema_elegido}"
-📌 TIPO DE CONTENIDO: {tipo.upper()}
+📌 IDEA DEL VIDEO: "{tema_elegido}"
+📌 RESTRICCIÓN/DESAFÍO: "{restriccion}"
+📌 TIPO: {tipo.upper()}
 
-🎯 REGLAS DE CONTENIDO VIRAL (MUY IMPORTANTE):
+🎯 REGLAS DE CONTENIDO VIRAL (BASADO EN LA ESTRATEGIA DE YAYAS):
 1. Escribe OBLIGATORIAMENTE entre 90 y 110 palabras.
-2. Divide el texto en 5 BLOQUES OBLIGATORIOS. DEBES USAR EXACTAMENTE ESTAS ETIQUETAS:
-   - [GANCHO] (3-5 palabras, impacto máximo)
-   - [DATOS] (1-2 oraciones con el dato impactante)
-   - [EXPLICACION] (2-3 oraciones desarrollando el tema)
-   - [SOLUCION] (1-2 oraciones con la moraleja)
-   - [CIERRE] (1 oración con pregunta o CTA)
-3. Tono coloquial, directo.
+2. Estructura de "DESAFÍO - PROCESO - RESULTADO":
+   - [GANCHO] Presenta el desafío (ej. "Voy a intentar X con solo $100").
+   - [DATOS] Muestra el punto de partida y el objetivo.
+   - [EXPLICACION] Describe el proceso, los obstáculos, la tensión.
+   - [SOLUCION] La estrategia usada para superar.
+   - [CIERRE] Resultado final (cumplido o no) + reflexión + CTA.
+3. Tono coloquial, directo, con preguntas retóricas.
 4. Números escritos con LETRAS (no "400,500").
+5. El título debe generar CURIOSIDAD, no solo SEO.
 
-🎯 REGLAS SEO:
-1. TÍTULO: 50-70 caracteres, con keyword al inicio.
+🎯 REGLAS SEO (pero sin sacrificar curiosidad):
+1. TÍTULO: 50-70 caracteres, con emoji y palabra clave al inicio.
 2. PALABRAS CLAVE: 2-3 términos de alto volumen.
 3. TAGS: 15-20 tags (sin fechas).
-4. PALABRAS PORTADA: 2-3 palabras.
+4. PALABRAS PORTADA: 2-3 palabras de impacto.
 
 🎯 🖼️ DISEÑO DE LA MINIATURA (SHORT):
-Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. 
+Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
 - Estilo: "crypto YouTube thumbnail", neón, high contrast, cinematic, hyperrealistic.
 - PROHIBIDO: personas, rostros, caras, textos.
-- Permitido: Bitcoin, oro, gráficos, fuego, hielo, tecnología.
+- Permitido: Bitcoin, oro, gráficos, fuego, hielo, tecnología, mapas, datos.
 - Tamaño: 1280x720 (horizontal).
+- El fondo debe reflejar el DESAFÍO (ej. una moneda, un gráfico, un camino).
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 📤 RESPUESTA: Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título SEO de 50-70 caracteres",
+    "titulo": "Título con curiosidad (50-70 chars)",
     "titulo_alternativo": "Segundo título para A/B testing",
     "anio_suceso": 2024,
     "palabras_clave": ["keyword1", "keyword2", "keyword3"],
@@ -569,12 +590,12 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
             print(f"   🏷️ Título: {data['titulo']} ({len(data['titulo'])} chars)")
             print(f"   🔑 Keywords: {keywords}")
             print(f"   📊 Palabras finales: {palabras}")
-            return data, tema_elegido
+            return data, tema_elegido, restriccion
             
         except Exception as e:
             print(f"❌ Intento {intento+1}/6 falló: {e}")
             if intento < 5:
-                time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
+                time.sleep(10)
 
     print("❌ TODOS LOS INTENTOS FALLARON.")
     sys.exit(1)
@@ -614,7 +635,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=35):
     return segmentos
 
 # ================================================================
-# ASIGNAR ETAPAS VISUALES
+# ASIGNAR ETAPAS VISUALES (adaptadas al desafío)
 # ================================================================
 def asignar_etapas_visuales(segmentos):
     n = len(segmentos)
@@ -622,18 +643,18 @@ def asignar_etapas_visuales(segmentos):
     ubicaciones = []
     
     mapa_etapas = [
-        "contexto_general",
-        "analisis_datos",
-        "evento_principal",
-        "climax",
-        "resolucion"
+        "contexto_desafio",   # Presentación del desafío
+        "inicio_proceso",     # Comienzo del proceso
+        "obstaculo",          # Obstáculo/tensión
+        "climax",             # Momento crítico
+        "resultado"           # Resultado final
     ]
     mapa_ubicaciones = [
-        "distrito financiero moderno, impacto visual",
-        "sala de trading con gráficos y datos",
-        "lugar del suceso financiero (banco, exchange)",
-        "momento crítico de máxima tensión",
-        "conclusión, ambiente calmado"
+        "persona preparándose para el desafío financiero",
+        "primeros pasos, gráficos iniciales",
+        "momento de duda o dificultad",
+        "punto de inflexión, máximo estrés",
+        "resultado, celebración o reflexión"
     ]
     
     for i in range(n):
@@ -644,7 +665,7 @@ def asignar_etapas_visuales(segmentos):
     return etapas, ubicaciones
 
 # ================================================================
-# GENERAR PROMPT DE IMAGEN
+# GENERAR PROMPT DE IMAGEN (ultraespecífico por bloque)
 # ================================================================
 def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
                                    segmento_anterior_texto=None,
@@ -656,16 +677,15 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: '{segmento_anterior_texto[:120]}'"
 
-    if es_primer_frame and index_segmento == 0:
-        estilo_base = f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on surfaces, high contrast, electric atmosphere, futuristic corporate look"
-    elif etapa in ["climax"]:
-        estilo_base = f"Hyperrealistic photography combined with intense {COLOR_NEON_ACTUAL} neon accents, dramatic lighting, high contrast, cinematic composition, financial crisis atmosphere"
-    elif etapa in ["evento_principal", "analisis_datos"]:
-        estilo_base = f"Realistic photograph with subtle {COLOR_NEON_ACTUAL} neon highlights, natural lighting mixed with artificial glow, professional corporate setting"
-    elif etapa in ["contexto_general"]:
-        estilo_base = "Authentic documentary-style photograph, natural lighting, real-world environment, no filters, no neon"
-    else:
-        estilo_base = "Realistic, natural photograph, natural lighting, authentic environment, calm atmosphere, no artificial effects"
+    # Prompts ultraespecíficos según la etapa
+    prompts_etapa = {
+        "contexto_desafio": f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on a Bitcoin coin or financial chart, person looking determined, high contrast, dramatic lighting, futuristic corporate look",
+        "inicio_proceso": f"Hyperrealistic photograph of a trading screen with initial numbers, soft {COLOR_NEON_ACTUAL} neon accent, professional setting, natural lighting, clean composition",
+        "obstaculo": f"Dramatic wide shot of a person looking at red graphs, intense {COLOR_NEON_ACTUAL} neon glow, high contrast, cinematic tension, dark atmosphere",
+        "climax": f"Extreme close-up of a glowing Bitcoin or gold bar, intense {COLOR_NEON_ACTUAL} neon lighting, high contrast, dramatic, hyperrealistic, 8k",
+        "resultado": f"Wide shot of a person celebrating with green charts, warm {COLOR_NEON_ACTUAL} neon accents, optimistic atmosphere, professional photography, sharp focus"
+    }
+    estilo_base = prompts_etapa.get(etapa, prompts_etapa["contexto_desafio"])
 
     descripcion_estilo = f"{estilo_base}, vertical 9:16, {PALETA_BASE_ACTUAL}, sharp focus, hyperdetailed, 8k resolution, cinematic"
 
@@ -674,7 +694,7 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
         elementos_tema = "digital currency, blockchain data, crypto screens, modern fintech environment"
     elif "oro" in tema_lower:
         elementos_tema = "gold bars, precious metals, vault, luxury banking setting"
-    elif "estafa" in tema_lower or "fraude" in tema_lower or "colapso" in tema_lower:
+    elif "estafa" in tema_lower or "fraude" in tema_lower:
         elementos_tema = "dramatic financial collapse scene, crisis atmosphere, concerned professionals"
     else:
         elementos_tema = "modern financial setting, professional environment"
@@ -697,10 +717,11 @@ SCENE DETAILS:
 - SUBJECT: {elementos_tema}
 
 COMPOSITION RULES:
-1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces.
+1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces unless the story requires it (climax).
 2. MAIN SUBJECT: The environment, objects, and setting.
 3. If people appear: They occupy AT MOST 15% of the frame.
 4. FOCUS: Sharp, hyperrealistic, premium quality.
+5. Colors: Use neon accents ({COLOR_NEON_ACTUAL}) and high contrast.
 
 Return ONLY the English prompt, no explanations.
 """
@@ -711,7 +732,7 @@ Return ONLY the English prompt, no explanations.
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.6,
-        "max_tokens": 350,
+        "max_tokens": 400,
     }
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=60)
@@ -721,7 +742,7 @@ Return ONLY the English prompt, no explanations.
         return prompt_img
     except Exception as e:
         print(f"⚠️ Error generando prompt: {e}")
-        return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}"
+        return f"Wide establishing shot of {ubicacion_escena}, vertical 9:16, financial environment, hyperrealistic, 8k quality, {PALETA_BASE_ACTUAL}, {COLOR_NEON_ACTUAL} accent"
 
 # ================================================================
 # GENERAR IMAGEN VERTICAL (CON PAUSA DE 10s)
@@ -772,14 +793,14 @@ def generar_imagen_vertical(prompt, intentos=3):
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
+            time.sleep(10)
     return None
 
 # ================================================================
 # GENERAR IMAGEN HORIZONTAL PARA MINIATURA (CON PAUSA DE 10s)
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
-    prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark"
+    prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, high contrast, sharp focus, no people, no text, no watermark, {COLOR_NEON_ACTUAL} glow, dark background"
     prompt_completo = prompt_completo[:950]
     
     url = "https://apihub.agnes-ai.com/v1/images/generations"
@@ -807,7 +828,7 @@ def generar_imagen_horizontal(prompt, intentos=3):
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
         if intento < intentos - 1:
-            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
+            time.sleep(10)
     return None
 
 # ================================================================
@@ -833,7 +854,7 @@ def generar_audio(texto, index, intentos_por_voz=2):
                 return filename
         except Exception as e:
             print(f"   ❌ Falló voz {voz}: {e}")
-        time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS
+        time.sleep(10)
         if os.path.exists(filename):
             try: os.remove(filename)
             except: pass
@@ -849,7 +870,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
 
     for idx, seg in enumerate(segmentos):
         print(f"  🎬 Segmento {idx+1}/{total} ({len(seg.split())} palabras)")
-        etapa = etapas[idx] if idx < len(etapas) else "contexto_general"
+        etapa = etapas[idx] if idx < len(etapas) else "contexto_desafio"
         ubic = ubicaciones[idx] if idx < len(ubicaciones) else "oficina financiera"
         seg_anterior = segmentos[idx-1] if idx > 0 else None
         es_primer_frame = (idx == 0)
@@ -866,7 +887,7 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
                 print(f"    ✅ Imagen generada (intento {intento+1})")
                 last_successful_url = img_url
                 break
-            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE INTENTOS DE IMAGEN
+            time.sleep(10)
         
         if not img_url:
             if last_successful_url:
@@ -908,12 +929,12 @@ def generar_recursos_por_segmento(segmentos, etapas, ubicaciones, tema=None, int
         
         if idx < total - 1:
             print(f"   ⏳ Esperando 10 segundos...")
-            time.sleep(10)  # 🔥 10 SEGUNDOS ENTRE SEGMENTOS
+            time.sleep(10)
     
     return recursos
 
 # ================================================================
-# SUBTÍTULOS CON PIL (VERTICAL)
+# SUBTÍTULOS CON PIL (VERTICAL) - MEJORADOS
 # ================================================================
 def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
     try:
@@ -921,10 +942,10 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         draw = ImageDraw.Draw(img)
         
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 50)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 55)
         except:
             try:
-                font = ImageFont.truetype("arial.ttf", 50)
+                font = ImageFont.truetype("arial.ttf", 55)
             except:
                 font = ImageFont.load_default()
                 print("   ⚠️ Usando fuente predeterminada")
@@ -962,7 +983,8 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
             bg_y = y - padding
             bg_w = ancho + padding * 2
             bg_h = alto + padding * 2
-            draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 160))
+            draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 180))
+            draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], outline=(0, 200, 255, 80), width=2)
             
             draw.text((x+3, y+3), linea, fill='black', font=font)
             draw.text((x, y), linea, fill='white', font=font)
@@ -975,7 +997,7 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# MINIATURA PROFESIONAL PARA SHORTS (CON FALLBACK DE FONDO SÓLIDO)
+# 🔥 MINIATURA PROFESIONAL MEJORADA
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_short.jpg"):
     try:
@@ -983,7 +1005,7 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         fondo_url = generar_imagen_horizontal(prompt_miniatura, intentos=2)
         if not fondo_url:
             print("⚠️ No se pudo generar fondo, usando fondo sólido")
-            fondo_path = generar_fondo_solido()
+            fondo_path = generar_fondo_solido(color=(10, 10, 30))
             fondo_url = fondo_path
         
         if fondo_url.startswith("http"):
@@ -995,7 +1017,7 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
                     f.write(r.content)
             except Exception as e:
                 print(f"⚠️ Error descargando fondo: {e}. Usando fondo sólido.")
-                img_path = generar_fondo_solido()
+                img_path = generar_fondo_solido(color=(10, 10, 30))
         else:
             img_path = fondo_url
         
@@ -1010,14 +1032,15 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         else:
             texto = ' '.join(lineas)
         
+        # Cargar fuente
         try:
-            font = ImageFont.truetype("fonts/Anton.ttf", 100)
+            font = ImageFont.truetype("fonts/Anton.ttf", 130)
         except:
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/Impact.ttf", 100)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/Impact.ttf", 130)
             except:
                 try:
-                    font = ImageFont.truetype("Impact.ttf", 100)
+                    font = ImageFont.truetype("Impact.ttf", 130)
                 except:
                     font = ImageFont.load_default()
         
@@ -1025,16 +1048,32 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         x = (1280 - text_w) // 2
-        y = (720 - text_h) // 2 + 60
+        y = (720 - text_h) // 2 + 40
         
-        for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4), (0, 6), (0, -6), (6, 0), (-6, 0)]:
+        # Fondo neón detrás del texto (rectángulo)
+        padding = 40
+        bg_x = x - padding
+        bg_y = y - padding - 10
+        bg_w = text_w + padding * 2
+        bg_h = text_h + padding * 2 + 20
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 200))
+        overlay_draw.rectangle([bg_x-3, bg_y-3, bg_x+bg_w+3, bg_y+bg_h+3], outline=(0, 200, 255, 180), width=4)
+        img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        draw = ImageDraw.Draw(img)
+        
+        # Sombra gruesa
+        for dx, dy in [(-5, -5), (-5, 5), (5, -5), (5, 5), (0, 8), (0, -8), (8, 0), (-8, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
+        # Borde blanco
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
             draw.text((x + dx, y + dy), texto, fill='white', font=font)
+        # Texto principal en AMARILLO NEÓN
         draw.text((x, y), texto, fill=(255, 255, 80), font=font)
         
         img.save(salida)
-        print(f"✅ Miniatura profesional para Short creada: {salida}")
+        print(f"✅ Miniatura profesional mejorada creada: {salida}")
         return salida
     except Exception as e:
         print(f"⚠️ Error en miniatura profesional: {e}")
@@ -1163,7 +1202,7 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, gancho, contexto, hashtag
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": tags[:30],
-            "categoryId": "22",  # 🔥 CAMBIADO A "Personas y Blogs"
+            "categoryId": "22",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -1214,14 +1253,12 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de SHORTS (VERSIÓN DEFINITIVA)")
-    print("   ✓ Música Corporate/Tech")
-    print("   ✓ Ken Burns (Zoom)")
-    print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura profesional (fondo Agnes + texto PIL)")
-    print("   ✓ Subtítulos 50px (orden corregido)")
-    print("   ✓ Fallback de bloques en guion")
-    print("   ✓ Tags sanitizados")
+    print("🎬 Capital Digital - Bot de SHORTS (ESTRATEGIA YAYAS)")
+    print("   ✓ Generación de ideas con restricción/desafío")
+    print("   ✓ Títulos con curiosidad")
+    print("   ✓ Estructura de desafío-proceso-resultado")
+    print("   ✓ Prompts de imagen ultraespecíficos")
+    print("   ✓ Miniatura mejorada con neón y alto contraste")
     print("   ✓ Pausas de 10 segundos entre generaciones")
     print("   ✓ Categoría: Personas y Blogs (22)")
     print("="*60)
@@ -1247,7 +1284,19 @@ def main():
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
     
-    guion, tema_elegido = generar_guion_financiero(tipo)
+    # 1. Generar idea con restricción/desafío
+    print("💡 Generando idea de video...")
+    idea_data = generar_idea_video(tipo)
+    if idea_data and "mejor_idea" in idea_data:
+        idea = idea_data["mejor_idea"]
+        print(f"   ✅ Idea seleccionada: {idea['titulo']}")
+        print(f"   🔥 Restricción: {idea['restriccion']}")
+    else:
+        print("⚠️ No se generó idea, usando tema aleatorio.")
+        idea = None
+    
+    # 2. Generar guion basado en la idea
+    guion, tema_elegido, restriccion = generar_guion_financiero(tipo, idea)
     texto = guion["texto_completo"]
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
     prompt_miniatura = guion.get("prompt_miniatura", "")
@@ -1255,6 +1304,7 @@ def main():
     palabras_texto = len(re.findall(r'\w+', texto))
     print(f"📝 Texto: {palabras_texto} palabras")
     print(f"📌 Tema: {tema_elegido}")
+    print(f"🔒 Restricción: {restriccion}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=35)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
@@ -1270,7 +1320,7 @@ def main():
     
     miniatura_path = None
     if prompt_miniatura:
-        print("🖼️ Generando miniatura profesional para Short...")
+        print("🖼️ Generando miniatura profesional...")
         miniatura_path = crear_miniatura_profesional(
             prompt_miniatura,
             palabras_portada,
