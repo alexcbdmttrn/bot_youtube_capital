@@ -43,7 +43,7 @@ META_DIARIA_LARGOS = 1
 DIAS_SIN_REPETIR_TEMA = 45
 
 # ================================================================
-# VOZ FIJA (Jorge)
+# VOZ FIJA (Jorge) - +10% para ritmo dinámico
 # ================================================================
 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+10%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
 CONFIG_VOZ_ACTUAL = VOZ_FIJA
@@ -78,7 +78,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# FUNCIONES DE ESTADO (iguales que antes)
+# FUNCIONES DE ESTADO
 # ================================================================
 def cargar_estado():
     try:
@@ -207,20 +207,82 @@ def obtener_tema_trending():
         return None
 
 # ================================================================
+# 🔥 GENERACIÓN DE IDEAS (Restricción/Desafío/Transformación)
+# ================================================================
+def generar_idea_video_largo(tipo):
+    """
+    Genera 5 ideas de video con restricción, desafío o transformación
+    y elige la que genera más curiosidad. Adaptado para videos largos (7-9 min).
+    """
+    prompt = f"""
+Eres un ESTRATEGA DE CONTENIDO VIRAL para YouTube en el nicho de finanzas/cripto.
+
+Tu tarea es generar 5 IDEAS DE VIDEO (para formato LARGO, 7-9 minutos) que sigan estos principios:
+1. RESTRICCIÓN: El creador se impone una limitación (ej. "invertir solo $100").
+2. DESAFÍO: Objetivo medible (ej. "llegar a $10,000 en 30 días").
+3. TRANSFORMACIÓN: Antes y después (ej. "de deudas a inversor").
+
+TIPO DE CONTENIDO: {tipo} (educativo, estafa, psicologia, analisis, noticia)
+
+Para cada idea, escribe:
+- Título (60-70 caracteres, con emoji y palabra clave, que genere CURIOSIDAD).
+- Descripción de 1-2 líneas explicando la restricción/desafío.
+- Nivel de curiosidad (1-10).
+
+Luego ELIGE LA MEJOR IDEA (la que genera más curiosidad) y devuélvela.
+
+RESPUESTA EN JSON:
+{{
+    "mejor_idea": {{
+        "titulo": "Título final con curiosidad",
+        "descripcion": "Descripción de la idea",
+        "restriccion": "Cuál es la restricción o desafío",
+        "tipo": "{tipo}"
+    }},
+    "ideas_generadas": [
+        {{"titulo": "...", "descripcion": "...", "curiosidad": 8}},
+        ...
+    ]
+}}
+"""
+    url = "https://api.deepseek.com/v1/chat/completions"
+    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.8,
+        "max_tokens": 1200,
+        "response_format": {"type": "json_object"}
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        content = data["choices"][0]["message"]["content"]
+        inicio = content.find("{")
+        fin = content.rfind("}")
+        json_str = content[inicio:fin+1]
+        return json.loads(json_str)
+    except Exception as e:
+        print(f"⚠️ Error generando ideas: {e}")
+        return None
+
+# ================================================================
 # EXPANSIÓN DE GUION LARGO
 # ================================================================
-def expandir_guion_largo(guion_corto, tema):
+def expandir_guion_largo(guion_corto, tema, restriccion):
     prompt = f"""
 Eres un GUIONISTA PROFESIONAL. El siguiente guion es demasiado corto. 
-EXPÁNDELO a 1300-1500 palabras añadiendo:
-- Más ejemplos concretos.
+EXPÁNDELO a 1300-1500 palabras, manteniendo el arco de DESAFÍO → PROCESO → RESULTADO.
+Añade:
+- Más ejemplos concretos relacionados con la restricción.
 - Datos y estadísticas relevantes.
 - Analogías y comparaciones.
-- Desarrollo de cada sección.
-- Contexto histórico o actual.
-- Consecuencias y beneficios.
+- Obstáculos y momentos de tensión.
+- Conclusión y reflexión final.
 
 TEMA: {tema}
+RESTRICCIÓN/DESAFÍO: {restriccion}
 
 GUION ACTUAL:
 {guion_corto}
@@ -254,32 +316,16 @@ DEVUELVE SOLO EL TEXTO DEL GUION EXPANDIDO, con los mismos bloques [HOOK], [INTR
 # SANITIZAR TAGS PARA YOUTUBE
 # ================================================================
 def sanitizar_tags(tags_str, max_chars=500):
-    """
-    Convierte una cadena de tags separados por coma en una lista válida para YouTube.
-    - Límite de 500 caracteres totales.
-    - Elimina caracteres no permitidos.
-    - Elimina tags duplicados y vacíos.
-    - Trunca si excede.
-    """
     if not tags_str:
         return []
-    
-    # Separar por coma y limpiar
     raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
-    
-    # Limpiar caracteres no permitidos (solo letras, números, espacios, guiones)
     cleaned_tags = []
     for tag in raw_tags:
-        # Reemplazar caracteres especiales
         clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
         clean = clean.strip()
-        if clean and len(clean) > 1:  # mínimo 2 caracteres
+        if clean and len(clean) > 1:
             cleaned_tags.append(clean)
-    
-    # Eliminar duplicados
     cleaned_tags = list(dict.fromkeys(cleaned_tags))
-    
-    # Asegurar que no exceda 500 caracteres (contando comas)
     current = ""
     for tag in cleaned_tags:
         if current:
@@ -290,106 +336,70 @@ def sanitizar_tags(tags_str, max_chars=500):
             current = test
         else:
             break
-    
-    # Devolver como lista de strings
     return current.split(",") if current else []
 
 # ================================================================
-# GENERAR GUION LARGO (CON PROMPT DE MINIATURA)
+# GENERAR GUION LARGO (CON ESTRUCTURA DE DESAFÍO)
 # ================================================================
-def generar_guion_largo(tipo):
+def generar_guion_largo(tipo, idea=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
 
-    TEMAS_EDUCATIVOS = [
-        "Cómo Invertir en Criptomonedas con Seguridad (Guía Completa)",
-        "Bitcoin y Oro: Refugios en Crisis Económica",
-        "Análisis Técnico vs Fundamental: Cuál es mejor para ti",
-        "Los 5 Niveles Financieros que te llevarán a la Riqueza",
-        "Cómo Funciona el Interés Compuesto y por qué te empobrece no usarlo",
-        "Estrategias de Diversificación de Portafolio para 2026",
-        "Cómo Identificar una Criptomoneda con Potencial (Fundamentals)",
-        "Finanzas Descentralizadas (DeFi): Oportunidades y Riesgos",
-        "Cómo Leer un Gráfico de Trading (Guía para Principiantes)",
-        "Inversión Pasiva vs Activa: Cuál te conviene más"
-    ]
-    TEMAS_ESTAFAS_CRISIS = [
-        "El Colapso de FTX: Lecciones Aprendidas",
-        "Cómo Detectar Estafas Piramidales en Cripto",
-        "El Caso Enron: La Mayor Estafa Corporativa",
-        "La Crisis de las Hipotecas Subprime 2008 y su Paralelismo con Cripto",
-        "Mt. Gox: El Robo de Bitcoin que Cambió Todo",
-        "Estafa de OneCoin: El Bitcoin Falso que Engañó al Mundo",
-        "Manipulación del Mercado: Cómo los Grandes Mueven los Precios",
-        "Alertas de Scams en Exchanges (Casos Reales)"
-    ]
-    TEMAS_PSICOLOGIA = [
-        "FOMO y Pánico: Cómo Dominar tus Emociones en el Trading",
-        "Los 4 Bugs Mentales que te Mantienen Pobre (y cómo arreglarlos)",
-        "Disciplina vs Dinero: Los Hábitos de los Ricos",
-        "Mentalidad de Riqueza: Cómo Atraer el Dinero",
-        "Deja de ser Esclavo del Sueldo: 3 Pasos para la Libertad Financiera"
-    ]
-    TEMAS_ANALISIS = [
-        "Análisis SHIBA INU: ¿Llegará a 1 Centavo?",
-        "Bitcoin Análisis: ¿Preparado para el Siguiente ATH?",
-        "Ethereum vs Solana: ¿Quién Ganará en 2026?",
-        "Helium (HNT): Minería sin Tarjetas Gráficas, ¿Vale la Pena?",
-        "Bittorrent (BTT): El Gigante Dormido del Almacenamiento",
-        "Nuevas Altcoins con Potencial X10 (Análisis de Proyectos)"
-    ]
-
-    temas_pool = []
-    if tipo == "educativo": temas_pool = TEMAS_EDUCATIVOS
-    elif tipo == "estafa": temas_pool = TEMAS_ESTAFAS_CRISIS
-    elif tipo == "psicologia": temas_pool = TEMAS_PSICOLOGIA
-    else: temas_pool = TEMAS_ANALISIS
-
-    temas_disponibles = [t for t in temas_pool if not tema_ya_publicado(t, DIAS_SIN_REPETIR_TEMA)]
-
-    tema_elegido = None
-    if tipo == "noticia":
-        trending = obtener_tema_trending()
-        if trending and not tema_ya_publicado(trending, DIAS_SIN_REPETIR_TEMA):
-            tema_elegido = trending
-            print(f"📰 Tema trending de NewsAPI: {tema_elegido}")
+    # Si no hay idea, generar una
+    if not idea:
+        print("💡 Generando idea con restricción/desafío...")
+        idea_data = generar_idea_video_largo(tipo)
+        if idea_data and "mejor_idea" in idea_data:
+            idea = idea_data["mejor_idea"]
+            print(f"   ✅ Idea seleccionada: {idea['titulo']}")
+            print(f"   🔥 Restricción: {idea['restriccion']}")
         else:
-            tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(TEMAS_EDUCATIVOS)
-            print(f"📌 Tema de respaldo: {tema_elegido}")
+            # Fallback a tema de lista
+            print("⚠️ No se generó idea, usando tema de respaldo.")
+            TEMAS_FALLBACK = {
+                "educativo": "Cómo Invertir en Criptomonedas con Seguridad (Guía Completa)",
+                "estafa": "El Colapso de FTX: Lecciones Aprendidas",
+                "psicologia": "FOMO y Pánico: Cómo Dominar tus Emociones en el Trading",
+                "analisis": "Análisis SHIBA INU: ¿Llegará a 1 Centavo?",
+                "noticia": "Bitcoin Análisis: ¿Preparado para el Siguiente ATH?"
+            }
+            tema_elegido = TEMAS_FALLBACK.get(tipo, "Inversiones en criptomonedas")
+            restriccion = "Desafío financiero"
+            idea = {"titulo": tema_elegido, "restriccion": restriccion}
     else:
-        tema_elegido = random.choice(temas_disponibles) if temas_disponibles else random.choice(temas_pool)
-        print(f"📌 Tema seleccionado: {tema_elegido}")
+        tema_elegido = idea["titulo"]
+        restriccion = idea.get("restriccion", "Desafío financiero")
 
     prompt = f"""
-Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DETALLADO y EXTENSO para un video de YouTube de 7-9 minutos.
+Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DETALLADO para un video de YouTube de 7-9 minutos.
 
-📌 TEMA: "{tema_elegido}"
+📌 IDEA DEL VIDEO: "{tema_elegido}"
+📌 RESTRICCIÓN/DESAFÍO: "{restriccion}"
 📌 TIPO: {tipo}
 
 🎯 REGLA DE ORO (CRÍTICA):
 - El guion DEBE tener entre 1300 y 1500 palabras.
 - Si el guion tiene menos de 1200 palabras, el video será demasiado corto.
-- Cada bloque debe tener el largo indicado:
+- Cada bloque debe tener el largo indicado.
 
-🎯 ESTRUCTURA OBLIGATORIA:
-[HOOK - 0:00] Gancho de impacto (5-10 palabras).
-[INTRO - 0:15] Presenta el tema, el problema y lo que aprenderán. (200-250 palabras)
-[PROBLEMA - 1:30] Expón el dolor o la oportunidad con datos y ejemplos reales. (250-300 palabras)
-[DESARROLLO - 3:00] Análisis profundo, contexto, casos prácticos. (300-350 palabras)
-[SOLUCION - 5:00] Pasos concretos, estrategias accionables. (250-300 palabras)
-[CIERRE - 7:00] Resumen y CTA ("Suscríbete, dale like, comenta"). (200-250 palabras)
+🎯 ESTRUCTURA OBLIGATORIA (basada en DESAFÍO → PROCESO → RESULTADO):
+[HOOK - 0:00] Presenta el desafío de forma impactante (ej. "Voy a intentar X en 30 días").
+[INTRO - 0:15] Explica por qué este desafío es interesante y qué se necesita. (150-200 palabras)
+[PROBLEMA - 1:30] Muestra los obstáculos iniciales, dudas, miedos. (200-250 palabras)
+[DESARROLLO - 3:00] El proceso paso a paso, con momentos de tensión y aprendizajes. (300-350 palabras)
+[SOLUCION - 5:00] La estrategia usada para superar los obstáculos, el clímax. (250-300 palabras)
+[CIERRE - 7:00] Resultado final (¿se logró o no?), reflexión y CTA. (200-250 palabras)
 
 🎯 REGLA DE ORO PARA NÚMEROS:
-- NUNCA uses números con comas: "400,500" o "50,100" (se confunden).
-- SIEMPRE escribe los números con LETRAS: "cuatrocientos" en lugar de "400", "cincuenta" en lugar de "50".
-- Para rangos, usa "entre X y Y" en lugar de "X-Y".
-- Para cifras exactas, usa palabras: "mil" en lugar de "1000", "diez mil" en lugar de "10,000".
+- NUNCA uses números con comas: "400,500" o "50,100".
+- SIEMPRE escribe los números con LETRAS: "cuatrocientos", "cincuenta".
+- Para rangos, usa "entre X y Y".
 
 🎯 INSTRUCCIONES ADICIONALES:
 - Usa un tono coloquial, como si hablaras con un amigo.
 - Incluye preguntas retóricas y analogías.
 - NO uses fechas específicas.
-- Asegúrate de que CADA BLOQUE tenga el largo indicado.
+- El título del video debe reflejar el desafío y generar curiosidad.
 
 🎯 IMÁGENES (prompts en inglés):
 Cada bloque tendrá un prompt de imagen específico para Agnes.
@@ -398,31 +408,33 @@ Cada bloque tendrá un prompt de imagen específico para Agnes.
 - Permitido: gráficos, monedas, datos, visualizaciones, mapas, tecnología.
 
 🎯 🖼️ DISEÑO DE LA MINIATURA (IMPORTANTE):
-Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fondo debe ser IMPACTANTE, con colores neón, alto contraste, y relacionado con el tema del video.
+Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fondo debe reflejar el DESAFÍO.
 - Estilo: "crypto YouTube thumbnail", neón, high contrast, cinematic, hyperrealistic.
-- PROHIBIDO: personas, rostros, caras, textos, letras, palabras.
-- Permitido: Bitcoin, oro, gráficos de trading, fuego, hielo, tecnología, redes, mapas.
+- PROHIBIDO: personas, rostros, caras, textos.
+- Permitido: una meta visual (ej. una moneda gigante, un gráfico ascendente, un camino con una X al final).
 - Tamaño: 1280x720 (horizontal).
-- Ejemplo para "Bitcoin vs Oro": "cinematic wide shot of a golden Bitcoin coin colliding with a golden brick, neon cyan and gold lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark".
+
+🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
+{titulos_referencia}
 
 📤 RESPUESTA EN JSON:
 {{
-    "titulo": "Título con emoji (60-70 chars)",
+    "titulo": "Título con emoji y curiosidad (60-70 chars)",
     "titulo_alternativo": "Título alternativo",
     "palabras_clave": ["kw1", "kw2", "kw3", "kw4", "kw5"],
-    "descripcion": "Descripción completa con capítulos y hashtags",
-    "tags": "25-30 tags separados por coma (SIN caracteres especiales, solo letras y espacios)",
+    "descripcion": "Descripción completa con capítulos y hashtags, incluyendo el desafío",
+    "tags": "25-30 tags separados por coma (SIN caracteres especiales)",
     "hashtags": "#hashtag1 #hashtag2",
     "guion": "Guion completo de 1300-1500 palabras con los 6 bloques marcados",
     "segmentos": [
         {{"bloque": "HOOK", "texto": "texto (~10 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "INTRO", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "PROBLEMA", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "DESARROLLO", "texto": "texto (~300 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "SOLUCION", "texto": "texto (~250 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}},
-        {{"bloque": "CIERRE", "texto": "texto (~200 palabras)", "prompt_imagen": "prompt en inglés SIN PERSONAS"}}
+        {{"bloque": "INTRO", "texto": "texto (~150-200 palabras)", "prompt_imagen": "prompt en inglés"}},
+        {{"bloque": "PROBLEMA", "texto": "texto (~200-250 palabras)", "prompt_imagen": "prompt en inglés"}},
+        {{"bloque": "DESARROLLO", "texto": "texto (~300-350 palabras)", "prompt_imagen": "prompt en inglés"}},
+        {{"bloque": "SOLUCION", "texto": "texto (~250-300 palabras)", "prompt_imagen": "prompt en inglés"}},
+        {{"bloque": "CIERRE", "texto": "texto (~200-250 palabras)", "prompt_imagen": "prompt en inglés"}}
     ],
-    "palabras_portada": "2-3 palabras para el texto de la miniatura (ej. 'BITCOIN vs ORO', 'FOMO y PÁNICO', 'COLAPSO FTX')",
+    "palabras_portada": "2-3 palabras para el texto de la miniatura (ej. 'LO LOGRO', 'EL DESAFIO')",
     "prompt_miniatura": "Prompt en inglés para el fondo de la miniatura (SIN texto, SIN personas, 1280x720)"
 }}
 """
@@ -453,7 +465,7 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
             
             if palabras < 1100:
                 print(f"⚠️ Guion corto ({palabras} palabras). Expandiendo...")
-                guion_expandido = expandir_guion_largo(guion_texto, tema_elegido)
+                guion_expandido = expandir_guion_largo(guion_texto, tema_elegido, restriccion)
                 if guion_expandido:
                     result["guion"] = guion_expandido
                     palabras = len(re.findall(r'\w+', guion_expandido))
@@ -467,11 +479,10 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
                 VOZ_FIJA = {"voz": "es-MX-JorgeNeural", "velocidad": "+5%", "tono": "-1Hz", "nombre": "Jorge (MX)"}
                 CONFIG_VOZ_ACTUAL = VOZ_FIJA
             
-            # Asegurar prompt_miniatura
             if "prompt_miniatura" not in result:
-                result["prompt_miniatura"] = f"cinematic wide shot of financial data and glowing charts, neon cyan and magenta lighting, high contrast, dark background, dramatic lighting, hyperrealistic, 8k, no people, no text, no watermark"
+                result["prompt_miniatura"] = f"cinematic wide shot of a glowing path leading to a golden Bitcoin, neon cyan and gold lighting, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark"
             
-            return result, tema_elegido
+            return result, tema_elegido, restriccion
         except Exception as e:
             print(f"❌ Intento {intento+1}/3 falló: {e}")
             time.sleep(10)
@@ -479,67 +490,36 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
     sys.exit(1)
 
 # ================================================================
-# 🆕 FILTRAR PROMPT DE MINIATURA (eliminar palabras sensibles)
+# FILTRAR PROMPT DE MINIATURA (evitar rechazo de Agnes)
 # ================================================================
 def filtrar_prompt_miniatura(prompt):
-    """
-    Elimina palabras que suelen disparar el moderador de contenido de Agnes
-    en contextos financieros/de noticias, reemplazándolas con alternativas neutras.
-    """
     if not prompt:
         return prompt
-
-    # Palabras sensibles (case-insensitive, palabra completa)
     palabras_sensibles = {
-        r'\bcrash\b': 'market drop',
-        r'\bcollapse\b': 'decline',
-        r'\bcollapsing\b': 'declining',
-        r'\bburning\b': 'glowing',
-        r'\bfire\b': 'bright light',
-        r'\bexplosion\b': 'burst',
-        r'\bexplosive\b': 'intense',
-        r'\bwreckage\b': 'ruins',
-        r'\bdestroyed\b': 'damaged',
-        r'\bdestruction\b': 'decay',
-        r'\bwar\b': 'conflict',
-        r'\bbattle\b': 'struggle',
-        r'\bblood\b': 'red',
-        r'\bwound\b': 'scar',
-        r'\bscam\b': 'deception',
-        r'\bfraud\b': 'fraudulent scheme',
-        r'\bvictim\b': 'affected person',
-        r'\bpanic\b': 'fear',
-        r'\bdisaster\b': 'crisis',
-        r'\bcatastrophe\b': 'tragedy',
-        r'\bcrisis\b': 'challenge',
-        r'\bdying\b': 'fading',
-        r'\bdeath\b': 'end',
-        r'\bdead\b': 'lifeless',
-        r'\bmurder\b': 'killing',
-        r'\bkill\b': 'eliminate',
-        r'\bgun\b': 'weapon',
-        r'\bweapon\b': 'tool',
-        r'\bexplode\b': 'burst',
-        r'\bexploded\b': 'burst',
-        r'\bsmoke\b': 'mist',
-        r'\bflames\b': 'light',
+        r'\bcrash\b': 'market drop', r'\bcollapse\b': 'decline',
+        r'\bburning\b': 'glowing', r'\bfire\b': 'bright light',
+        r'\bexplosion\b': 'burst', r'\bexplosive\b': 'intense',
+        r'\bwreckage\b': 'ruins', r'\bdestroyed\b': 'damaged',
+        r'\bwar\b': 'conflict', r'\bbattle\b': 'struggle',
+        r'\bblood\b': 'red', r'\bscam\b': 'deception',
+        r'\bfraud\b': 'fraudulent scheme', r'\bpanic\b': 'fear',
+        r'\bdisaster\b': 'crisis', r'\bcatastrophe\b': 'tragedy',
+        r'\bcrisis\b': 'challenge', r'\bdeath\b': 'end',
+        r'\bkill\b': 'eliminate', r'\bgun\b': 'weapon',
+        r'\bexplode\b': 'burst', r'\bflames\b': 'light',
     }
-
     prompt_filtrado = prompt
     for patron, reemplazo in palabras_sensibles.items():
         prompt_filtrado = re.sub(patron, reemplazo, prompt_filtrado, flags=re.IGNORECASE)
-
-    # Si después de filtrar queda muy corto, usar prompt de respaldo genérico
     if len(prompt_filtrado.split()) < 10:
         return "cinematic wide shot of glowing financial charts and golden coins, neon cyan and gold lighting, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark"
-
     return prompt_filtrado
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL (16:9) CON REINTENTOS Y LOGGING
+# GENERAR IMAGEN HORIZONTAL (16:9) CON REINTENTOS
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
-    prompt = prompt[:950]  # truncar
+    prompt = prompt[:950]
     prompt_completo = f"{prompt}, hyperrealistic, 8k, cinematic lighting, electric cyan neon, high contrast, sharp focus, wide shot, environment as main subject, no close-up face, no text, no watermark"
     prompt_completo = prompt_completo[:950]
     
@@ -566,7 +546,6 @@ def generar_imagen_horizontal(prompt, intentos=3):
                     print(f"   ✅ Imagen generada exitosamente en intento {intento+1}.")
                     return data["data"][0]["url"]
             else:
-                # Mostrar más del error para diagnóstico
                 print(f"   ⚠️ Error {r.status_code} - {r.text[:400]}")
         except Exception as e:
             print(f"   ⚠️ Error conexión: {e}")
@@ -576,10 +555,9 @@ def generar_imagen_horizontal(prompt, intentos=3):
     return None
 
 # ================================================================
-# GENERAR FONDO SÓLIDO (fallback si falla placeholder)
+# GENERAR FONDO SÓLIDO (fallback)
 # ================================================================
 def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
-    """Genera una imagen de color sólido como fallback."""
     img = Image.new('RGB', (ancho, alto), color)
     path = f"temp_fondo_{random.randint(1000,9999)}.jpg"
     img.save(path)
@@ -590,13 +568,10 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo.jpg"):
     print("🖼️ Generando miniatura profesional...")
-
-    # 1. Filtrar prompt para evitar rechazo de moderación
     prompt_filtrado = filtrar_prompt_miniatura(prompt_miniatura)
     print(f"   📝 Prompt original: {prompt_miniatura[:200]}...")
     print(f"   📝 Prompt filtrado: {prompt_filtrado[:200]}...")
 
-    # 2. Lista de prompts a intentar (orden de prioridad)
     prompts_a_intentar = [
         prompt_filtrado,
         "cinematic wide shot of glowing financial charts and golden coins, neon cyan and gold lighting, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark",
@@ -606,11 +581,11 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
     fondo_url = None
     for intento, prompt in enumerate(prompts_a_intentar[:3], start=1):
         print(f"   🖼️ Intento {intento}/3 generando miniatura...")
-        fondo_url = generar_imagen_horizontal(prompt, intentos=1)  # solo 1 intento interno porque ya estamos en loop
+        fondo_url = generar_imagen_horizontal(prompt, intentos=1)
         if fondo_url:
             break
         if intento < 3:
-            print("   ⏳ Esperando 10 segundos antes del siguiente intento...")
+            print("   ⏳ Esperando 10 segundos...")
             time.sleep(10)
 
     if not fondo_url:
@@ -618,7 +593,6 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         fondo_path = generar_fondo_solido()
         fondo_url = fondo_path
 
-    # Procesar imagen
     try:
         if fondo_url.startswith("http"):
             try:
@@ -645,15 +619,15 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         else:
             texto = ' '.join(lineas)
         
-        # Fuente
+        # Fuente grande para impacto
         try:
-            font = ImageFont.truetype("fonts/Anton.ttf", 100)
+            font = ImageFont.truetype("fonts/Anton.ttf", 130)
         except:
             try:
-                font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/Impact.ttf", 100)
+                font = ImageFont.truetype("/usr/share/fonts/truetype/msttcorefonts/Impact.ttf", 130)
             except:
                 try:
-                    font = ImageFont.truetype("Impact.ttf", 100)
+                    font = ImageFont.truetype("Impact.ttf", 130)
                 except:
                     font = ImageFont.load_default()
         
@@ -663,13 +637,26 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         x = (1280 - text_w) // 2
         y = (720 - text_h) // 2 + 60
         
-        # Sombra
-        for dx, dy in [(-4, -4), (-4, 4), (4, -4), (4, 4), (0, 6), (0, -6), (6, 0), (-6, 0)]:
+        # Fondo neón detrás del texto
+        padding = 40
+        bg_x = x - padding
+        bg_y = y - padding - 10
+        bg_w = text_w + padding * 2
+        bg_h = text_h + padding * 2 + 20
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
+        overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 200))
+        overlay_draw.rectangle([bg_x-3, bg_y-3, bg_x+bg_w+3, bg_y+bg_h+3], outline=(0, 200, 255, 180), width=4)
+        img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
+        draw = ImageDraw.Draw(img)
+        
+        # Sombra gruesa
+        for dx, dy in [(-5, -5), (-5, 5), (5, -5), (5, 5), (0, 8), (0, -8), (8, 0), (-8, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
         # Borde blanco
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
             draw.text((x + dx, y + dy), texto, fill='white', font=font)
-        # Texto neón
+        # Texto principal en AMARILLO NEÓN
         draw.text((x, y), texto, fill=(255, 255, 80), font=font)
         
         img.save(salida)
@@ -923,7 +910,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON CATEGORÍA 22: PERSONAS Y BLOGS)
+# SUBIR A YOUTUBE (CON CATEGORÍA 22)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_path=None):
     try:
@@ -933,7 +920,6 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
         print(f"❌ Error autenticando: {e}")
         sys.exit(1)
     
-    # Sanitizar tags
     tags = sanitizar_tags(etiquetas_str)
     print(f"📝 Tags sanitizados: {len(tags)} tags, {sum(len(t)+1 for t in tags)} caracteres aprox.")
     
@@ -944,8 +930,8 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
         "snippet": {
             "title": titulo[:100],
             "description": descripcion_final[:5000],
-            "tags": tags[:30],  # máximo 30 tags
-            "categoryId": "22",  # 🔥 CAMBIADO A "Personas y Blogs"
+            "tags": tags[:30],
+            "categoryId": "22",
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -997,17 +983,12 @@ def limpiar_archivos_temporales():
 # ================================================================
 def main():
     print("="*60)
-    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (VERSIÓN DEFINITIVA)")
-    print("   ✓ Música: The Ascent, Binary Pulse, Peak Momentum, Forward Momentum")
-    print("   ✓ Ken Burns (Zoom)")
-    print("   ✓ Transiciones Fade")
-    print("   ✓ Miniatura profesional (fondo Agnes + texto PIL)")
-    print("   ✓ Subtítulos 28px (orden corregido)")
-    print("   ✓ Capítulos 14px, CTA 40px")
-    print("   ✓ Tags sanitizados para YouTube")
-    print("   ✓ Fallback de imágenes con fondos sólidos")
-    print("   ✓ Filtro de contenido para miniaturas (evita rechazo de Agnes)")
-    print("   ✓ 3 intentos con 10s de espera para imágenes")
+    print("🎬 Capital Digital - Bot de VIDEOS LARGOS (ESTRATEGIA YAYAS)")
+    print("   ✓ Generación de ideas con restricción/desafío")
+    print("   ✓ Estructura de desafío-proceso-resultado")
+    print("   ✓ Títulos con curiosidad")
+    print("   ✓ Miniatura mejorada con texto neón")
+    print("   ✓ Pausas de 10s entre generaciones")
     print("   ✓ Categoría: Personas y Blogs (22)")
     print("="*60)
     
@@ -1027,12 +1008,24 @@ def main():
     estado = cargar_estado()
     fondo_path = seleccionar_fondo_disponible(estado)
     
-    guion, tema = generar_guion_largo(tipo)
+    # 1. Generar idea con restricción/desafío
+    print("💡 Generando idea de video...")
+    idea_data = generar_idea_video_largo(tipo)
+    if idea_data and "mejor_idea" in idea_data:
+        idea = idea_data["mejor_idea"]
+        print(f"   ✅ Idea seleccionada: {idea['titulo']}")
+        print(f"   🔥 Restricción: {idea['restriccion']}")
+    else:
+        print("⚠️ No se generó idea, usando tema de respaldo.")
+        idea = None
+    
+    # 2. Generar guion basado en la idea
+    guion, tema, restriccion = generar_guion_largo(tipo, idea)
     titulo = guion["titulo"]
     descripcion = guion["descripcion"]
     tags_str = guion.get("tags", "")
     segmentos = guion["segmentos"]
-    palabras_portada = guion.get("palabras_portada", "RÉCORD")
+    palabras_portada = guion.get("palabras_portada", "DESAFÍO")
     prompt_miniatura = guion.get("prompt_miniatura", "")
     
     capitulos = []
@@ -1065,7 +1058,7 @@ def main():
             "texto": seg["texto"],
             "bloque": seg.get("bloque", "")
         })
-        time.sleep(15)  # pausa entre segmentos
+        time.sleep(15)
     
     if not recursos:
         print("❌ No se generaron recursos.")
