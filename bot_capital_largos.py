@@ -923,7 +923,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON SANITIZACIÓN DE TAGS)
+# SUBIR A YOUTUBE (CON CATEGORÍA 22: PERSONAS Y BLOGS)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_path=None):
     try:
@@ -945,7 +945,7 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
             "title": titulo[:100],
             "description": descripcion_final[:5000],
             "tags": tags[:30],  # máximo 30 tags
-            "categoryId": "27",
+            "categoryId": "22",  # 🔥 CAMBIADO A "Personas y Blogs"
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -1008,6 +1008,7 @@ def main():
     print("   ✓ Fallback de imágenes con fondos sólidos")
     print("   ✓ Filtro de contenido para miniaturas (evita rechazo de Agnes)")
     print("   ✓ 3 intentos con 10s de espera para imágenes")
+    print("   ✓ Categoría: Personas y Blogs (22)")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
