@@ -1133,7 +1133,7 @@ def montar_video_shorts(recursos, fondo_path, salida="short_capital.mp4"):
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON SANITIZACIÓN DE TAGS)
+# SUBIR A YOUTUBE (CON CATEGORÍA 22: PERSONAS Y BLOGS)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas_str, gancho, contexto, hashtags, fuente="", miniatura_path=None):
     try:
@@ -1163,7 +1163,7 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, gancho, contexto, hashtag
             "title": titulo[:100],
             "description": descripcion[:5000],
             "tags": tags[:30],
-            "categoryId": "27",
+            "categoryId": "22",  # 🔥 CAMBIADO A "Personas y Blogs"
             "defaultLanguage": "es",
             "defaultAudioLanguage": "es",
         },
@@ -1223,6 +1223,7 @@ def main():
     print("   ✓ Fallback de bloques en guion")
     print("   ✓ Tags sanitizados")
     print("   ✓ Pausas de 10 segundos entre generaciones")
+    print("   ✓ Categoría: Personas y Blogs (22)")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
