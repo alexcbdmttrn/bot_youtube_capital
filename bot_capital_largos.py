@@ -332,7 +332,7 @@ RETURN ONLY THE EXPANDED SCRIPT TEXT, with the same blocks [HOOK], [INTRO], [PRO
         "max_tokens": 4000,
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=120)
+        r = requests.post(url, headers=headers, json=payload, timeout=150)
         r.raise_for_status()
         expanded = r.json()["choices"][0]["message"]["content"].strip()
         palabras = len(re.findall(r'\w+', expanded))
