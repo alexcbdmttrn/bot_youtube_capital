@@ -260,7 +260,7 @@ RESPONSE IN JSON:
         "response_format": {"type": "json_object"}
     }
     try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r = requests.post(url, headers=headers, json=payload, timeout=90)
         r.raise_for_status()
         data = r.json()
         content = data["choices"][0]["message"]["content"]
