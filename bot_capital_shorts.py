@@ -77,7 +77,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# PALETAS Y ESTILOS VISUALES (neón + alto contraste)
+# PALETAS Y ESTILOS VISUALES
 # ================================================================
 PALETAS_BASE = [
     "Corporate blue and silver, modern office",
@@ -210,7 +210,7 @@ def tema_ya_publicado(tema, dias=30):
     return False
 
 # ================================================================
-# TREND-JACKING
+# TREND-JACKING CON NOTICIAS DEL DÍA ACTUAL
 # ================================================================
 def obtener_noticia_trending():
     try:
@@ -228,8 +228,10 @@ def obtener_noticia_trending():
             if data.get("articles"):
                 for article in data["articles"]:
                     title = article.get("title", "")
-                    if any(word in title.lower() for word in ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso"]):
-                        return title
+                    # Filtrar noticias que no tengan fechas pasadas
+                    if not re.search(r'20[0-2][0-9]', title):
+                        if any(word in title.lower() for word in ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso"]):
+                            return title
                 return data["articles"][0].get("title", "")
         return None
     except Exception as e:
@@ -272,15 +274,15 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
     return path
 
 # ================================================================
-# 🔥 GENERACIÓN DE IDEAS (Restricción/Desafío/Transformación)
+# 🔥 GENERACIÓN DE IDEAS CON FECHA ACTUAL
 # ================================================================
-def generar_idea_video(tipo):
-    """
-    Genera 5 ideas de video con restricción, desafío o transformación
-    y elige la que genera más curiosidad.
-    """
+def generar_idea_video(tipo, fecha_actual):
     prompt = f"""
 Eres un ESTRATEGA DE CONTENIDO VIRAL para YouTube en el nicho de finanzas/cripto.
+
+📅 FECHA ACTUAL: {fecha_actual}
+⚠️ IMPORTANTE: NO uses fechas pasadas como 2020, 2021, 2022, 2023 o 2024.
+   Usa la fecha actual ({fecha_actual}) o referencias como "hoy", "esta semana".
 
 Tu tarea es generar 5 IDEAS DE VIDEO que sigan estos principios:
 1. RESTRICCIÓN: El creador se impone una limitación (ej. "invertir solo $100").
@@ -290,7 +292,7 @@ Tu tarea es generar 5 IDEAS DE VIDEO que sigan estos principios:
 TIPO DE CONTENIDO: {tipo} (educativo, estafa, psicologia, analisis, noticia)
 
 Para cada idea, escribe:
-- Título (60-70 caracteres, con emoji y keyword al inicio).
+- Título (60-70 caracteres, con emoji y keyword al inicio, que genere CURIOSIDAD).
 - Descripción de 1-2 líneas explicando la restricción/desafío.
 - Nivel de curiosidad (1-10).
 
@@ -299,7 +301,7 @@ Luego ELIGE LA MEJOR IDEA (la que genera más curiosidad) y devuélvela.
 RESPUESTA EN JSON:
 {{
     "mejor_idea": {{
-        "titulo": "Título final con curiosidad",
+        "titulo": "Título final con curiosidad (sin fechas pasadas)",
         "descripcion": "Descripción de la idea",
         "restriccion": "Cuál es la restricción o desafío",
         "tipo": "{tipo}"
@@ -414,24 +416,73 @@ def extraer_bloques(texto):
     return [texto]
 
 # ================================================================
-# 🔥 GENERAR GUION (CON ESTRUCTURA DE DESAFÍO Y CURIOSIDAD)
+# 🔥 GENERAR GUION CON FECHA ACTUAL
 # ================================================================
-def generar_guion_financiero(tipo, idea=None):
+def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
+    if not fecha_actual:
+        fecha_actual = datetime.now(pytz.timezone("America/Mexico_City")).strftime("%d de %B de %Y")
+
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+
+    # Listas de temas financieros (sin fechas)
+    NICHOS_EDUCATIVOS = [
+        "Inversiones en criptomonedas", "Estrategias para ahorrar e invertir",
+        "Conceptos básicos del mercado financiero", "Cómo funciona la bolsa de valores",
+        "Educación sobre seguros y protección financiera", "Análisis de activos: oro, acciones, bonos",
+        "Finanzas personales y presupuestos", "Tecnología financiera (fintech)",
+        "Planificación para el retiro", "Impuestos y declaraciones fiscales",
+        "Qué es el trading y cómo empezar", "Forex: el mercado de divisas",
+        "Cómo funcionan los ETFs", "Acciones vs. bonos: diferencias clave",
+        "Qué es la diversificación de cartera", "Cómo leer un estado financiero",
+        "Finanzas conductuales", "Qué es un fideicomiso",
+        "Cómo funciona el crowdfunding", "Inversiones sostenibles y ESG",
+        "Qué es el interés compuesto", "Cómo invertir en bienes raíces",
+        "El papel de los bancos centrales", "Inflación y poder adquisitivo",
+        "Qué son las criptomonedas estables", "Cómo funciona un exchange",
+        "Qué es un swap en finanzas", "Cómo protegerte de la inflación",
+        "Estrategias de inversión a largo plazo", "Análisis técnico vs. fundamental"
+    ]
+    
+    NICHOS_ESTAFAS = [
+        "Fraudes famosos en el mundo financiero", "Estafas con criptomonedas",
+        "Crisis bancarias y sus lecciones", "Escándalos corporativos",
+        "Estafas de inversión", "Casos de corrupción financiera",
+        "Colapsos bursátiles", "Estafas piramidales",
+        "Fraudes con seguros", "Manipulación del mercado",
+        "Estafa de las opciones binarias", "Fraude de las criptomonedas falsas",
+        "El colapso de los mercados emergentes", "Estafas de refinanciación",
+        "Fraudes con préstamos", "Esquemas Ponzi en la historia",
+        "Manipulación de la libra esterlina", "Estafas de las puntocom",
+        "Fraude de las hipotecas subprime", "Caso de la estafa de la minera de Bitcoin",
+        "El escándalo de las divisas", "Estafa de las acciones de centavo",
+        "Fraude de los seguros de vida", "Estafa de los fondos de inversión",
+        "Caso de la estafa de las criptomonedas en México",
+        "Fraudes con tarjetas de crédito", "Estafas de los bienes raíces",
+        "El caso de la estafa de la energética", "Fraudes con las remesas",
+        "Estafas de las inversiones en arte"
+    ]
 
     # Si no hay idea, generar una
     if not idea:
         print("💡 Generando idea con restricción/desafío...")
-        idea_data = generar_idea_video(tipo)
+        idea_data = generar_idea_video(tipo, fecha_actual)
         if idea_data and "mejor_idea" in idea_data:
             idea = idea_data["mejor_idea"]
-            print(f"   Idea seleccionada: {idea['titulo']}")
-            print(f"   Restricción: {idea['restriccion']}")
+            print(f"   ✅ Idea seleccionada: {idea['titulo']}")
+            print(f"   🔥 Restricción: {idea['restriccion']}")
         else:
-            # Fallback a tema aleatorio
             print("⚠️ No se generó idea, usando tema aleatorio.")
-            idea = {"titulo": "Inversiones en criptomonedas", "restriccion": "Invertir con poco capital"}
+            if tipo == "noticia":
+                noticia = obtener_noticia_trending()
+                if noticia:
+                    idea = {"titulo": noticia, "restriccion": "Noticia del día"}
+                else:
+                    idea = {"titulo": random.choice(NICHOS_EDUCATIVOS), "restriccion": "Educación financiera"}
+            elif tipo == "educativo":
+                idea = {"titulo": random.choice(NICHOS_EDUCATIVOS), "restriccion": "Concepto financiero"}
+            else:
+                idea = {"titulo": random.choice(NICHOS_ESTAFAS), "restriccion": "Caso real"}
 
     tema_elegido = idea["titulo"]
     restriccion = idea.get("restriccion", "Desafío financiero")
@@ -442,6 +493,12 @@ Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
 📌 IDEA DEL VIDEO: "{tema_elegido}"
 📌 RESTRICCIÓN/DESAFÍO: "{restriccion}"
 📌 TIPO: {tipo.upper()}
+📅 FECHA ACTUAL: {fecha_actual}
+
+⚠️ REGLA DE FECHAS (MUY IMPORTANTE):
+   - NO uses fechas pasadas como 2020, 2021, 2022, 2023 o 2024.
+   - Si necesitas mencionar un año, usa el año actual: {fecha_actual.split()[-1]}.
+   - Para eventos recientes, di "hoy", "esta semana" o "en los últimos días".
 
 🎯 REGLAS DE CONTENIDO VIRAL (BASADO EN LA ESTRATEGIA DE YAYAS):
 1. Escribe OBLIGATORIAMENTE entre 90 y 110 palabras.
@@ -453,9 +510,8 @@ Eres un EXPERTO EN FINANZAS y CREADOR DE CONTENIDO VIRAL PARA YOUTUBE SHORTS.
    - [CIERRE] Resultado final (cumplido o no) + reflexión + CTA.
 3. Tono coloquial, directo, con preguntas retóricas.
 4. Números escritos con LETRAS (no "400,500").
-5. El título debe generar CURIOSIDAD, no solo SEO.
 
-🎯 REGLAS SEO (pero sin sacrificar curiosidad):
+🎯 REGLAS SEO (sin sacrificar curiosidad):
 1. TÍTULO: 50-70 caracteres, con emoji y palabra clave al inicio.
 2. PALABRAS CLAVE: 2-3 términos de alto volumen.
 3. TAGS: 15-20 tags (sin fechas).
@@ -467,23 +523,22 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura.
 - PROHIBIDO: personas, rostros, caras, textos.
 - Permitido: Bitcoin, oro, gráficos, fuego, hielo, tecnología, mapas, datos.
 - Tamaño: 1280x720 (horizontal).
-- El fondo debe reflejar el DESAFÍO (ej. una moneda, un gráfico, un camino).
 
 🚫 TÍTULOS YA PUBLICADOS (NO REPETIR):
 {titulos_referencia}
 
 📤 RESPUESTA: Devuelve ESTRICTAMENTE este JSON:
 {{
-    "titulo": "Título con curiosidad (50-70 chars)",
+    "titulo": "Título con curiosidad (50-70 chars, sin fechas pasadas)",
     "titulo_alternativo": "Segundo título para A/B testing",
-    "anio_suceso": 2024,
+    "anio_suceso": {fecha_actual.split()[-1]},
     "palabras_clave": ["keyword1", "keyword2", "keyword3"],
     "gancho_descripcion": "Gancho para descripción (máx 90 chars)",
     "contexto_descripcion": "Contexto en una oración",
     "fuente_relato": "Fuente del relato",
     "texto_completo": "Texto con los 5 bloques (90-110 palabras)",
     "palabras_portada": "2-3 palabras para miniatura",
-    "tags": "15-20 tags separados por coma",
+    "tags": "15-20 tags separados por coma (sin fechas)",
     "prompt_miniatura": "Prompt en inglés para el fondo de la miniatura (SIN texto, SIN personas, 1280x720)"
 }}
 """
@@ -635,7 +690,7 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=35):
     return segmentos
 
 # ================================================================
-# ASIGNAR ETAPAS VISUALES (adaptadas al desafío)
+# ASIGNAR ETAPAS VISUALES
 # ================================================================
 def asignar_etapas_visuales(segmentos):
     n = len(segmentos)
@@ -643,11 +698,11 @@ def asignar_etapas_visuales(segmentos):
     ubicaciones = []
     
     mapa_etapas = [
-        "contexto_desafio",   # Presentación del desafío
-        "inicio_proceso",     # Comienzo del proceso
-        "obstaculo",          # Obstáculo/tensión
-        "climax",             # Momento crítico
-        "resultado"           # Resultado final
+        "contexto_desafio",
+        "inicio_proceso",
+        "obstaculo",
+        "climax",
+        "resultado"
     ]
     mapa_ubicaciones = [
         "persona preparándose para el desafío financiero",
@@ -677,7 +732,6 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
     if segmento_anterior_texto:
         contexto_previo = f"\nPREVIOUS SCENE: '{segmento_anterior_texto[:120]}'"
 
-    # Prompts ultraespecíficos según la etapa
     prompts_etapa = {
         "contexto_desafio": f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on a Bitcoin coin or financial chart, person looking determined, high contrast, dramatic lighting, futuristic corporate look",
         "inicio_proceso": f"Hyperrealistic photograph of a trading screen with initial numbers, soft {COLOR_NEON_ACTUAL} neon accent, professional setting, natural lighting, clean composition",
@@ -997,7 +1051,7 @@ def agregar_subtitulos_con_pil(imagen_path, texto, salida_path):
         return imagen_path
 
 # ================================================================
-# 🔥 MINIATURA PROFESIONAL MEJORADA
+# MINIATURA PROFESIONAL MEJORADA
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_short.jpg"):
     try:
@@ -1050,7 +1104,7 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         x = (1280 - text_w) // 2
         y = (720 - text_h) // 2 + 40
         
-        # Fondo neón detrás del texto (rectángulo)
+        # Fondo neón detrás del texto
         padding = 40
         bg_x = x - padding
         bg_y = y - padding - 10
@@ -1255,12 +1309,20 @@ def main():
     print("="*60)
     print("🎬 Capital Digital - Bot de SHORTS (ESTRATEGIA YAYAS)")
     print("   ✓ Generación de ideas con restricción/desafío")
-    print("   ✓ Títulos con curiosidad")
+    print("   ✓ Títulos con curiosidad (sin fechas pasadas)")
     print("   ✓ Estructura de desafío-proceso-resultado")
     print("   ✓ Prompts de imagen ultraespecíficos")
     print("   ✓ Miniatura mejorada con neón y alto contraste")
     print("   ✓ Pausas de 10 segundos entre generaciones")
+    print("   ✓ Noticias del día actual (NewsAPI)")
     print("   ✓ Categoría: Personas y Blogs (22)")
+    print("="*60)
+
+    # 🔥 OBTENER FECHA ACTUAL
+    tz_mexico = pytz.timezone("America/Mexico_City")
+    fecha_actual = datetime.now(tz_mexico)
+    fecha_formateada = fecha_actual.strftime("%d de %B de %Y")
+    print(f"📅 Fecha actual: {fecha_formateada}")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -1286,7 +1348,7 @@ def main():
     
     # 1. Generar idea con restricción/desafío
     print("💡 Generando idea de video...")
-    idea_data = generar_idea_video(tipo)
+    idea_data = generar_idea_video(tipo, fecha_formateada)
     if idea_data and "mejor_idea" in idea_data:
         idea = idea_data["mejor_idea"]
         print(f"   ✅ Idea seleccionada: {idea['titulo']}")
@@ -1296,7 +1358,7 @@ def main():
         idea = None
     
     # 2. Generar guion basado en la idea
-    guion, tema_elegido, restriccion = generar_guion_financiero(tipo, idea)
+    guion, tema_elegido, restriccion = generar_guion_financiero(tipo, idea, fecha_formateada)
     texto = guion["texto_completo"]
     palabras_portada = guion.get("palabras_portada", "RÉCORD")
     prompt_miniatura = guion.get("prompt_miniatura", "")
