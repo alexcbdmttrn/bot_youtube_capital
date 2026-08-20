@@ -267,19 +267,41 @@ You are a VIRAL CONTENT STRATEGIST for YouTube in the finance/crypto niche.
 ⚠️ IMPORTANT: DO NOT use past dates like 2020, 2021, 2022, 2023 or 2024.
    Use the current date ({fecha_actual}) or references like "today", "this week".
 
-Your task is to generate 5 VIDEO IDEAS (for LONG format, 7-9 minutes) that follow these principles:
-1. RESTRICTION: The creator imposes a limitation (e.g., "invest only $100").
-2. CHALLENGE: Measurable goal (e.g., "reach $10,000 in 30 days").
-3. TRANSFORMATION: Before and after (e.g., "from debt to investor").
+🎯 RESTRICTION: Vary the amount of money! DO NOT always use $100.
+   Use different amounts like: $50, $200, $500, $1,000, $5,000, or even "only $10".
+   Use different timeframes: 7 days, 14 days, 30 days, 60 days, 90 days, or "1 year".
+
+🎯 CHALLENGE TYPES (choose a different one each time):
+   1. "Grow a small amount into a large amount" (e.g., $50 → $5,000).
+   2. "Follow a strategy blindly" (e.g., a trading bot, a guru's picks).
+   3. "Avoid common mistakes" (e.g., "I made these 3 mistakes so you don't have to").
+   4. "Test a controversial method" (e.g., "Is this crypto mining method a scam?").
+   5. "Compare two strategies" (e.g., "Day trading vs. holding: which wins?").
+   6. "Survival challenge" (e.g., "Can you survive 30 days without checking your portfolio?").
+   7. "Reverse psychology" (e.g., "Do the opposite of what everyone is doing").
+   8. "Extreme risk" (e.g., "I invested in the most volatile coin").
+   9. "Educational breakdown" (e.g., "How does a crypto scam actually work?").
+   10. "Personal story" (e.g., "How I lost $10,000 and what I learned").
+
+🎯 PREVENT REPETITION:
+   - DO NOT use "$100" as the amount if it was used recently.
+   - DO NOT use "30 days" if it was used recently.
+   - DO NOT use "turn $X into $Y" if it was used recently.
+   - Choose a DIFFERENT amount and a DIFFERENT timeframe.
 
 CONTENT TYPE: {tipo} (educational, scam, psychology, analysis, news)
 
+Your task is to generate 5 VIDEO IDEAS (for LONG format, 7-9 minutes) that follow these principles:
+1. RESTRICTION: The creator imposes a limitation (choose a different amount, different timeframe).
+2. CHALLENGE: Measurable goal (but not always "grow money", could be "avoid losing" or "learn to trade").
+3. TRANSFORMATION: Before and after (e.g., "from skeptical to believer", "from loser to winner").
+
 For each idea, write:
-- Title (60-70 characters, with emoji and keyword, generating CURIOSITY).
+- Title (60-70 characters, with emoji and keyword, generating CURIOSITY). DO NOT use the same wording as previous videos.
 - 1-2 line description explaining the restriction/challenge.
 - Curiosity level (1-10).
 
-Then CHOOSE THE BEST IDEA (the one with the most curiosity) and return it.
+Then CHOOSE THE BEST IDEA (the one with the most curiosity and the most DIFFERENT from previous ones) and return it.
 
 RESPONSE IN JSON:
 {{
@@ -318,30 +340,49 @@ RESPONSE IN JSON:
         return None
 
 # ================================================================
-# SANITIZAR TAGS (en inglés)
+# SANITIZAR TAGS MEJORADO (Robusto para YouTube)
 # ================================================================
 def sanitizar_tags(tags_str, max_chars=500):
+    """
+    Limpia y formatea tags para YouTube.
+    - Solo caracteres alfanuméricos, espacios y guiones.
+    - Elimina caracteres especiales (#, $, %, etc.)
+    - Elimina duplicados.
+    - No excede max_chars.
+    """
     if not tags_str:
         return []
+    
+    # Separar por comas
     raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
-    cleaned_tags = []
+    
+    # Limpiar cada tag
+    cleaned = []
     for tag in raw_tags:
+        # Eliminar caracteres no permitidos (solo letras, números, espacios, guiones)
         clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
         clean = clean.strip()
+        # Descartar tags vacíos o demasiado cortos
         if clean and len(clean) > 1:
-            cleaned_tags.append(clean)
-    cleaned_tags = list(dict.fromkeys(cleaned_tags))
-    current = ""
-    for tag in cleaned_tags:
-        if current:
-            test = current + "," + tag
+            cleaned.append(clean)
+    
+    # Eliminar duplicados
+    cleaned = list(dict.fromkeys(cleaned))
+    
+    # Construir la cadena final sin exceder max_chars
+    result = ""
+    for tag in cleaned:
+        if result:
+            test = result + "," + tag
         else:
             test = tag
         if len(test) <= max_chars:
-            current = test
+            result = test
         else:
             break
-    return current.split(",") if current else []
+    
+    # Devolver como lista (no como string)
+    return result.split(",") if result else []
 
 # ================================================================
 # EXPANSIÓN DE GUION (EN INGLÉS)
@@ -512,6 +553,14 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND of the thumbnail
 - Allowed: a visual goal (e.g., a giant coin, an upward graph, a path with an X at the end).
 - Size: 1280x720 (horizontal).
 
+🎯 TAGS RULES (CRITICAL FOR YOUTUBE):
+- Tags must be separated by commas ONLY.
+- NO special characters: #, $, %, &, *, etc.
+- NO hashtags (#) inside tags.
+- Tags should be simple keywords like: "bitcoin", "crypto", "trading".
+- Maximum 500 characters total.
+- Example: "bitcoin,crypto,trading,investing,finance,challenge"
+
 🚫 TITLES ALREADY PUBLISHED (DO NOT REPEAT):
 {titulos_referencia}
 
@@ -521,7 +570,7 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND of the thumbnail
     "alternative_title": "Alternative title",
     "keywords": ["kw1", "kw2", "kw3", "kw4", "kw5"],
     "description": "Full description with chapters and hashtags, including the challenge",
-    "tags": "25-30 tags separated by commas (NO special characters, no dates)",
+    "tags": "25-30 tags separated by commas (NO special characters, no #, no dates)",
     "hashtags": "#hashtag1 #hashtag2",
     "script": "Full script of 1300-1500 words with the 6 marked blocks",
     "segments": [
@@ -743,11 +792,9 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 200))
-        # ELIMINADO EL RECTÁNGULO CON BORDE QUE CAUSABA LOS "GUIONES"
         img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
         draw = ImageDraw.Draw(img)
         
-        # Sombra y borde del texto
         for dx, dy in [(-5, -5), (-5, 5), (5, -5), (5, 5), (0, 8), (0, -8), (8, 0), (-8, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
@@ -1005,7 +1052,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital_en.mp4", capi
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON CATEGORÍA 22: PEOPLE & BLOGS)
+# SUBIR A YOUTUBE (CON CATEGORÍA 22: PEOPLE & BLOGS Y VALIDACIÓN DE TAGS)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_path=None):
     try:
@@ -1015,8 +1062,25 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
         print(f"❌ Error authenticating: {e}")
         sys.exit(1)
     
+    # Limpiar y validar tags
     tags = sanitizar_tags(etiquetas_str)
-    print(f"📝 Sanitized tags: {len(tags)} tags")
+    
+    # Si no hay tags válidos, usar unos por defecto
+    if not tags:
+        print("⚠️ No valid tags found. Using default tags.")
+        tags = ["finance", "investing", "crypto", "trading", "challenge"]
+    
+    # Asegurar que no excedan 500 caracteres
+    tags_str_final = ",".join(tags)
+    if len(tags_str_final) > 500:
+        # Recortar
+        tags = tags[:10]  # Tomar solo los primeros 10
+        tags_str_final = ",".join(tags)
+        if len(tags_str_final) > 500:
+            tags = tags[:5]
+            tags_str_final = ",".join(tags)
+    
+    print(f"📝 Final tags ({len(tags)}): {tags_str_final}")
     
     disclaimer = "\n\n⚠️ IMPORTANT NOTICE: This content is for educational purposes only and does not constitute financial, legal, or investment advice."
     descripcion_final = descripcion + disclaimer
@@ -1025,7 +1089,7 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
         "snippet": {
             "title": titulo[:100],
             "description": descripcion_final[:5000],
-            "tags": tags[:30],
+            "tags": tags[:30],  # YouTube permite hasta 30 tags
             "categoryId": "22",
             "defaultLanguage": "en",
             "defaultAudioLanguage": "en",
@@ -1088,6 +1152,7 @@ def main():
     print("   ✓ Category: People & Blogs (22)")
     print("   ✓ IMAGE REUSE: falls back to previous/next segment")
     print("   ✓ DUPLICATE CONTROL: checks Spanish bot's history too")
+    print("   ✓ TAGS VALIDATION: ensures YouTube-compatible tags")
     print("="*60)
 
     tz_mexico = ZoneInfo("America/Mexico_City")
