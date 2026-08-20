@@ -179,7 +179,7 @@ def tema_ya_publicado(tema, dias=45):
     return False
 
 # ================================================================
-# TREND-JACKING
+# TREND-JACKING CON NOTICIAS DEL DÍA ACTUAL
 # ================================================================
 def obtener_tema_trending():
     try:
@@ -197,25 +197,31 @@ def obtener_tema_trending():
             if data.get("articles"):
                 for article in data["articles"]:
                     title = article.get("title", "")
-                    keywords = ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso", "shiba", "dogecoin", "ethereum", "solana", "ftx", "binance", "exchange"]
-                    if any(word in title.lower() for word in keywords):
+                    # Filtrar noticias con fechas pasadas
+                    if not re.search(r'20[0-2][0-9]', title):
+                        keywords = ["bitcoin", "cripto", "oro", "etf", "inflación", "banco", "finanzas", "dólar", "peso", "shiba", "dogecoin", "ethereum", "solana", "ftx", "binance", "exchange"]
+                        if any(word in title.lower() for word in keywords):
+                            return title[:100]
+                # Si no encuentra con keywords, devuelve el primero sin fecha pasada
+                for article in data["articles"]:
+                    title = article.get("title", "")
+                    if not re.search(r'20[0-2][0-9]', title):
                         return title[:100]
-                return data["articles"][0].get("title", "")[:100]
         return None
     except Exception as e:
         print(f"⚠️ Error obteniendo trending: {e}")
         return None
 
 # ================================================================
-# 🔥 GENERACIÓN DE IDEAS (Restricción/Desafío/Transformación)
+# 🔥 GENERACIÓN DE IDEAS CON FECHA ACTUAL
 # ================================================================
-def generar_idea_video_largo(tipo):
-    """
-    Genera 5 ideas de video con restricción, desafío o transformación
-    y elige la que genera más curiosidad. Adaptado para videos largos (7-9 min).
-    """
+def generar_idea_video_largo(tipo, fecha_actual):
     prompt = f"""
 Eres un ESTRATEGA DE CONTENIDO VIRAL para YouTube en el nicho de finanzas/cripto.
+
+📅 FECHA ACTUAL: {fecha_actual}
+⚠️ IMPORTANTE: NO uses fechas pasadas como 2020, 2021, 2022, 2023 o 2024.
+   Usa la fecha actual ({fecha_actual}) o referencias como "hoy", "esta semana".
 
 Tu tarea es generar 5 IDEAS DE VIDEO (para formato LARGO, 7-9 minutos) que sigan estos principios:
 1. RESTRICCIÓN: El creador se impone una limitación (ej. "invertir solo $100").
@@ -234,7 +240,7 @@ Luego ELIGE LA MEJOR IDEA (la que genera más curiosidad) y devuélvela.
 RESPUESTA EN JSON:
 {{
     "mejor_idea": {{
-        "titulo": "Título final con curiosidad",
+        "titulo": "Título final con curiosidad (sin fechas pasadas)",
         "descripcion": "Descripción de la idea",
         "restriccion": "Cuál es la restricción o desafío",
         "tipo": "{tipo}"
@@ -268,18 +274,47 @@ RESPUESTA EN JSON:
         return None
 
 # ================================================================
+# SANITIZAR TAGS PARA YOUTUBE
+# ================================================================
+def sanitizar_tags(tags_str, max_chars=500):
+    if not tags_str:
+        return []
+    raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
+    cleaned_tags = []
+    for tag in raw_tags:
+        clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
+        clean = clean.strip()
+        if clean and len(clean) > 1:
+            cleaned_tags.append(clean)
+    cleaned_tags = list(dict.fromkeys(cleaned_tags))
+    current = ""
+    for tag in cleaned_tags:
+        if current:
+            test = current + "," + tag
+        else:
+            test = tag
+        if len(test) <= max_chars:
+            current = test
+        else:
+            break
+    return current.split(",") if current else []
+
+# ================================================================
 # EXPANSIÓN DE GUION LARGO
 # ================================================================
-def expandir_guion_largo(guion_corto, tema, restriccion):
+def expandir_guion_largo(guion_corto, tema, restriccion, fecha_actual):
     prompt = f"""
 Eres un GUIONISTA PROFESIONAL. El siguiente guion es demasiado corto. 
 EXPÁNDELO a 1300-1500 palabras, manteniendo el arco de DESAFÍO → PROCESO → RESULTADO.
 Añade:
 - Más ejemplos concretos relacionados con la restricción.
-- Datos y estadísticas relevantes.
+- Datos y estadísticas relevantes (sin fechas pasadas).
 - Analogías y comparaciones.
 - Obstáculos y momentos de tensión.
 - Conclusión y reflexión final.
+
+📅 FECHA ACTUAL: {fecha_actual}
+⚠️ NO uses fechas pasadas (2020, 2021, 2022, 2023, 2024).
 
 TEMA: {tema}
 RESTRICCIÓN/DESAFÍO: {restriccion}
@@ -313,62 +348,77 @@ DEVUELVE SOLO EL TEXTO DEL GUION EXPANDIDO, con los mismos bloques [HOOK], [INTR
         return None
 
 # ================================================================
-# SANITIZAR TAGS PARA YOUTUBE
+# 🔥 GENERAR GUION LARGO CON FECHA ACTUAL
 # ================================================================
-def sanitizar_tags(tags_str, max_chars=500):
-    if not tags_str:
-        return []
-    raw_tags = [t.strip() for t in tags_str.split(",") if t.strip()]
-    cleaned_tags = []
-    for tag in raw_tags:
-        clean = re.sub(r'[^a-zA-Z0-9áéíóúüñÁÉÍÓÚÜÑ\s\-]', '', tag)
-        clean = clean.strip()
-        if clean and len(clean) > 1:
-            cleaned_tags.append(clean)
-    cleaned_tags = list(dict.fromkeys(cleaned_tags))
-    current = ""
-    for tag in cleaned_tags:
-        if current:
-            test = current + "," + tag
-        else:
-            test = tag
-        if len(test) <= max_chars:
-            current = test
-        else:
-            break
-    return current.split(",") if current else []
-
-# ================================================================
-# GENERAR GUION LARGO (CON ESTRUCTURA DE DESAFÍO)
-# ================================================================
-def generar_guion_largo(tipo, idea=None):
+def generar_guion_largo(tipo, fecha_actual, idea=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "Ninguno aún."
+
+    TEMAS_EDUCATIVOS = [
+        "Cómo Invertir en Criptomonedas con Seguridad (Guía Completa)",
+        "Bitcoin y Oro: Refugios en Crisis Económica",
+        "Análisis Técnico vs Fundamental: Cuál es mejor para ti",
+        "Los 5 Niveles Financieros que te llevarán a la Riqueza",
+        "Cómo Funciona el Interés Compuesto y por qué te empobrece no usarlo",
+        "Estrategias de Diversificación de Portafolio",
+        "Cómo Identificar una Criptomoneda con Potencial (Fundamentals)",
+        "Finanzas Descentralizadas (DeFi): Oportunidades y Riesgos",
+        "Cómo Leer un Gráfico de Trading (Guía para Principiantes)",
+        "Inversión Pasiva vs Activa: Cuál te conviene más"
+    ]
+    TEMAS_ESTAFAS_CRISIS = [
+        "El Colapso de FTX: Lecciones Aprendidas",
+        "Cómo Detectar Estafas Piramidales en Cripto",
+        "El Caso Enron: La Mayor Estafa Corporativa",
+        "La Crisis de las Hipotecas Subprime y su Paralelismo con Cripto",
+        "Mt. Gox: El Robo de Bitcoin que Cambió Todo",
+        "Estafa de OneCoin: El Bitcoin Falso que Engañó al Mundo",
+        "Manipulación del Mercado: Cómo los Grandes Mueven los Precios",
+        "Alertas de Scams en Exchanges (Casos Reales)"
+    ]
+    TEMAS_PSICOLOGIA = [
+        "FOMO y Pánico: Cómo Dominar tus Emociones en el Trading",
+        "Los 4 Bugs Mentales que te Mantienen Pobre (y cómo arreglarlos)",
+        "Disciplina vs Dinero: Los Hábitos de los Ricos",
+        "Mentalidad de Riqueza: Cómo Atraer el Dinero",
+        "Deja de ser Esclavo del Sueldo: 3 Pasos para la Libertad Financiera"
+    ]
+    TEMAS_ANALISIS = [
+        "Análisis SHIBA INU: ¿Llegará a 1 Centavo?",
+        "Bitcoin Análisis: ¿Preparado para el Siguiente ATH?",
+        "Ethereum vs Solana: ¿Quién Ganará en el Futuro?",
+        "Helium (HNT): Minería sin Tarjetas Gráficas, ¿Vale la Pena?",
+        "Bittorrent (BTT): El Gigante Dormido del Almacenamiento",
+        "Nuevas Altcoins con Potencial X10 (Análisis de Proyectos)"
+    ]
 
     # Si no hay idea, generar una
     if not idea:
         print("💡 Generando idea con restricción/desafío...")
-        idea_data = generar_idea_video_largo(tipo)
+        idea_data = generar_idea_video_largo(tipo, fecha_actual)
         if idea_data and "mejor_idea" in idea_data:
             idea = idea_data["mejor_idea"]
             print(f"   ✅ Idea seleccionada: {idea['titulo']}")
             print(f"   🔥 Restricción: {idea['restriccion']}")
         else:
-            # Fallback a tema de lista
             print("⚠️ No se generó idea, usando tema de respaldo.")
-            TEMAS_FALLBACK = {
-                "educativo": "Cómo Invertir en Criptomonedas con Seguridad (Guía Completa)",
-                "estafa": "El Colapso de FTX: Lecciones Aprendidas",
-                "psicologia": "FOMO y Pánico: Cómo Dominar tus Emociones en el Trading",
-                "analisis": "Análisis SHIBA INU: ¿Llegará a 1 Centavo?",
-                "noticia": "Bitcoin Análisis: ¿Preparado para el Siguiente ATH?"
-            }
-            tema_elegido = TEMAS_FALLBACK.get(tipo, "Inversiones en criptomonedas")
-            restriccion = "Desafío financiero"
-            idea = {"titulo": tema_elegido, "restriccion": restriccion}
-    else:
-        tema_elegido = idea["titulo"]
-        restriccion = idea.get("restriccion", "Desafío financiero")
+            if tipo == "noticia":
+                trending = obtener_tema_trending()
+                if trending:
+                    idea = {"titulo": trending, "restriccion": "Noticia del día"}
+                else:
+                    idea = {"titulo": random.choice(TEMAS_EDUCATIVOS), "restriccion": "Educación financiera"}
+            elif tipo == "educativo":
+                idea = {"titulo": random.choice(TEMAS_EDUCATIVOS), "restriccion": "Concepto financiero"}
+            elif tipo == "estafa":
+                idea = {"titulo": random.choice(TEMAS_ESTAFAS_CRISIS), "restriccion": "Caso real"}
+            elif tipo == "psicologia":
+                idea = {"titulo": random.choice(TEMAS_PSICOLOGIA), "restriccion": "Psicología financiera"}
+            else:
+                idea = {"titulo": random.choice(TEMAS_ANALISIS), "restriccion": "Análisis de mercado"}
+
+    tema_elegido = idea["titulo"]
+    restriccion = idea.get("restriccion", "Desafío financiero")
 
     prompt = f"""
 Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DETALLADO para un video de YouTube de 7-9 minutos.
@@ -376,6 +426,12 @@ Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DET
 📌 IDEA DEL VIDEO: "{tema_elegido}"
 📌 RESTRICCIÓN/DESAFÍO: "{restriccion}"
 📌 TIPO: {tipo}
+📅 FECHA ACTUAL: {fecha_actual}
+
+⚠️ REGLA DE FECHAS (MUY IMPORTANTE):
+   - NO uses fechas pasadas como 2020, 2021, 2022, 2023 o 2024.
+   - Si necesitas mencionar un año, usa el año actual: {fecha_actual.split()[-1]}.
+   - Para eventos recientes, di "hoy", "esta semana" o "en los últimos días".
 
 🎯 REGLA DE ORO (CRÍTICA):
 - El guion DEBE tener entre 1300 y 1500 palabras.
@@ -398,8 +454,7 @@ Eres un GUIONISTA PROFESIONAL y EXPERTO EN FINANZAS. Debes escribir un guion DET
 🎯 INSTRUCCIONES ADICIONALES:
 - Usa un tono coloquial, como si hablaras con un amigo.
 - Incluye preguntas retóricas y analogías.
-- NO uses fechas específicas.
-- El título del video debe reflejar el desafío y generar curiosidad.
+- NO uses fechas específicas pasadas.
 
 🎯 IMÁGENES (prompts en inglés):
 Cada bloque tendrá un prompt de imagen específico para Agnes.
@@ -419,11 +474,11 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
 
 📤 RESPUESTA EN JSON:
 {{
-    "titulo": "Título con emoji y curiosidad (60-70 chars)",
+    "titulo": "Título con emoji y curiosidad (60-70 chars, sin fechas pasadas)",
     "titulo_alternativo": "Título alternativo",
     "palabras_clave": ["kw1", "kw2", "kw3", "kw4", "kw5"],
     "descripcion": "Descripción completa con capítulos y hashtags, incluyendo el desafío",
-    "tags": "25-30 tags separados por coma (SIN caracteres especiales)",
+    "tags": "25-30 tags separados por coma (SIN caracteres especiales, sin fechas)",
     "hashtags": "#hashtag1 #hashtag2",
     "guion": "Guion completo de 1300-1500 palabras con los 6 bloques marcados",
     "segmentos": [
@@ -465,7 +520,7 @@ Crea un prompt en INGLÉS para que Agnes genere el FONDO de la miniatura. El fon
             
             if palabras < 1100:
                 print(f"⚠️ Guion corto ({palabras} palabras). Expandiendo...")
-                guion_expandido = expandir_guion_largo(guion_texto, tema_elegido, restriccion)
+                guion_expandido = expandir_guion_largo(guion_texto, tema_elegido, restriccion, fecha_actual)
                 if guion_expandido:
                     result["guion"] = guion_expandido
                     palabras = len(re.findall(r'\w+', guion_expandido))
@@ -564,7 +619,7 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
     return path
 
 # ================================================================
-# MINIATURA PROFESIONAL (con prompt específico + texto PIL)
+# MINIATURA PROFESIONAL MEJORADA
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo.jpg"):
     print("🖼️ Generando miniatura profesional...")
@@ -910,7 +965,7 @@ def montar_video_largo(recursos, fondo_path, salida="largo_capital.mp4", capitul
     return salida
 
 # ================================================================
-# SUBIR A YOUTUBE (CON CATEGORÍA 22)
+# SUBIR A YOUTUBE (CON CATEGORÍA 22: PERSONAS Y BLOGS)
 # ================================================================
 def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_path=None):
     try:
@@ -986,10 +1041,18 @@ def main():
     print("🎬 Capital Digital - Bot de VIDEOS LARGOS (ESTRATEGIA YAYAS)")
     print("   ✓ Generación de ideas con restricción/desafío")
     print("   ✓ Estructura de desafío-proceso-resultado")
-    print("   ✓ Títulos con curiosidad")
+    print("   ✓ Títulos con curiosidad (sin fechas pasadas)")
     print("   ✓ Miniatura mejorada con texto neón")
     print("   ✓ Pausas de 10s entre generaciones")
+    print("   ✓ Noticias del día actual (NewsAPI)")
     print("   ✓ Categoría: Personas y Blogs (22)")
+    print("="*60)
+
+    # 🔥 OBTENER FECHA ACTUAL
+    tz_mexico = pytz.timezone("America/Mexico_City")
+    fecha_actual = datetime.now(tz_mexico)
+    fecha_formateada = fecha_actual.strftime("%d de %B de %Y")
+    print(f"📅 Fecha actual: {fecha_formateada}")
     print("="*60)
     
     if not YOUTUBE_USER_TOKEN:
@@ -1010,7 +1073,7 @@ def main():
     
     # 1. Generar idea con restricción/desafío
     print("💡 Generando idea de video...")
-    idea_data = generar_idea_video_largo(tipo)
+    idea_data = generar_idea_video_largo(tipo, fecha_formateada)
     if idea_data and "mejor_idea" in idea_data:
         idea = idea_data["mejor_idea"]
         print(f"   ✅ Idea seleccionada: {idea['titulo']}")
@@ -1020,7 +1083,7 @@ def main():
         idea = None
     
     # 2. Generar guion basado en la idea
-    guion, tema, restriccion = generar_guion_largo(tipo, idea)
+    guion, tema, restriccion = generar_guion_largo(tipo, fecha_formateada, idea)
     titulo = guion["titulo"]
     descripcion = guion["descripcion"]
     tags_str = guion.get("tags", "")
