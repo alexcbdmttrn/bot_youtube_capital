@@ -39,6 +39,12 @@ CANAL_LINK = "https://www.youtube.com/@CapitalMinds"
 ESTADO_FILE = "estado_capital_largos_en.json"
 TITULOS_FILE = "titulos_capital_largos_en_publicados.json"
 TEMAS_PUBLICADOS_FILE = "temas_largos_en_publicados.json"
+
+# Archivos de estado del bot en español (para evitar duplicados entre bots)
+ESTADO_FILE_ES = "estado_capital_largos.json"
+TITULOS_FILE_ES = "titulos_capital_largos_publicados.json"
+TEMAS_PUBLICADOS_FILE_ES = "temas_largos_publicados.json"
+
 META_DIARIA_LARGOS = 1
 DIAS_SIN_REPETIR_TEMA = 45
 
@@ -78,7 +84,7 @@ def seleccionar_fondo_disponible(estado):
     return seleccionada
 
 # ================================================================
-# FUNCIONES DE ESTADO (idénticas al original)
+# FUNCIONES DE ESTADO (con soporte para revisar también los archivos en español)
 # ================================================================
 def cargar_estado():
     try:
@@ -98,18 +104,39 @@ def guardar_estado(estado):
         }, f, indent=2, ensure_ascii=False)
 
 def cargar_titulos_publicados():
+    # Cargar títulos del bot en inglés
     try:
         with open(TITULOS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            titulos_en = data.get("titulos", [])
     except:
-        return {"titulos": []}
+        titulos_en = []
+    
+    # Cargar títulos del bot en español (para evitar duplicados)
+    try:
+        with open(TITULOS_FILE_ES, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            titulos_es = data.get("titulos", [])
+    except:
+        titulos_es = []
+    
+    # Combinar y eliminar duplicados
+    todos = list(set(titulos_en + titulos_es))
+    return {"titulos": todos}
 
 def guardar_titulo_publicado(titulo):
     data = cargar_titulos_publicados()
     if titulo not in data["titulos"]:
-        data["titulos"].append(titulo)
-        with open(TITULOS_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        # Guardar solo en el archivo del bot en inglés
+        try:
+            with open(TITULOS_FILE, "r", encoding="utf-8") as f:
+                data_en = json.load(f)
+        except:
+            data_en = {"titulos": []}
+        if titulo not in data_en["titulos"]:
+            data_en["titulos"].append(titulo)
+            with open(TITULOS_FILE, "w", encoding="utf-8") as f:
+                json.dump(data_en, f, indent=2, ensure_ascii=False)
 
 def titulo_ya_publicado(titulo):
     data = cargar_titulos_publicados()
@@ -148,12 +175,24 @@ def incrementar_publicaciones_hoy():
     guardar_estado(estado)
 
 def cargar_temas_publicados():
+    # Cargar temas del bot en inglés
     try:
         with open(TEMAS_PUBLICADOS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data.get("temas", [])
+            temas_en = data.get("temas", [])
     except:
-        return []
+        temas_en = []
+    
+    # Cargar temas del bot en español
+    try:
+        with open(TEMAS_PUBLICADOS_FILE_ES, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            temas_es = data.get("temas", [])
+    except:
+        temas_es = []
+    
+    # Combinar
+    return temas_en + temas_es
 
 def guardar_tema_publicado(tema, tipo):
     temas = cargar_temas_publicados()
@@ -162,11 +201,17 @@ def guardar_tema_publicado(tema, tipo):
         "tipo": tipo,
         "fecha": datetime.now(ZoneInfo("America/Mexico_City")).strftime("%Y-%m-%d")
     }
-    temas.append(tema_data)
-    if len(temas) > 200:
-        temas = temas[-200:]
+    # Guardar solo en el archivo del bot en inglés
+    try:
+        with open(TEMAS_PUBLICADOS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except:
+        data = {"temas": []}
+    data["temas"].append(tema_data)
+    if len(data["temas"]) > 200:
+        data["temas"] = data["temas"][-200:]
     with open(TEMAS_PUBLICADOS_FILE, "w", encoding="utf-8") as f:
-        json.dump({"temas": temas}, f, indent=2, ensure_ascii=False)
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
 def tema_ya_publicado(tema, dias=45):
     temas = cargar_temas_publicados()
@@ -569,7 +614,7 @@ def filtrar_prompt_miniatura(prompt):
     return prompt_filtrado
 
 # ================================================================
-# GENERAR IMAGEN HORIZONTAL
+# GENERAR IMAGEN HORIZONTAL CON TIMEOUT AUMENTADO (180s)
 # ================================================================
 def generar_imagen_horizontal(prompt, intentos=3):
     prompt = prompt[:950]
@@ -591,7 +636,8 @@ def generar_imagen_horizontal(prompt, intentos=3):
     for intento in range(intentos):
         try:
             print(f"   🖼️ Sending prompt to Agnes (attempt {intento+1}/{intentos})...")
-            r = requests.post(url, headers=headers, json=payload, timeout=120)
+            # TIMEOUT AUMENTADO A 180 SEGUNDOS (3 MINUTOS)
+            r = requests.post(url, headers=headers, json=payload, timeout=180)
             if r.status_code == 200:
                 data = r.json()
                 if data.get("data") and len(data["data"]) > 0:
@@ -616,7 +662,7 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1280, alto=720):
     return path
 
 # ================================================================
-# MINIATURA PROFESIONAL MEJORADA (en inglés)
+# MINIATURA PROFESIONAL MEJORADA (sin el rectángulo con borde)
 # ================================================================
 def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatura_largo_en.jpg"):
     print("🖼️ Generating professional thumbnail...")
@@ -688,6 +734,7 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         x = (1280 - text_w) // 2
         y = (720 - text_h) // 2 + 60
         
+        # Fondo oscuro detrás del texto (sin borde)
         padding = 40
         bg_x = x - padding
         bg_y = y - padding - 10
@@ -696,10 +743,11 @@ def crear_miniatura_profesional(prompt_miniatura, texto_portada, salida="miniatu
         overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
         overlay_draw.rectangle([bg_x, bg_y, bg_x + bg_w, bg_y + bg_h], fill=(0, 0, 0, 200))
-        overlay_draw.rectangle([bg_x-3, bg_y-3, bg_x+bg_w+3, bg_y+bg_h+3], outline=(0, 200, 255, 180), width=4)
+        # ELIMINADO EL RECTÁNGULO CON BORDE QUE CAUSABA LOS "GUIONES"
         img = Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB')
         draw = ImageDraw.Draw(img)
         
+        # Sombra y borde del texto
         for dx, dy in [(-5, -5), (-5, 5), (5, -5), (5, 5), (0, 8), (0, -8), (8, 0), (-8, 0)]:
             draw.text((x + dx, y + dy), texto, fill='black', font=font)
         for dx, dy in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
@@ -1026,7 +1074,7 @@ def limpiar_archivos_temporales():
     print("✅ Cleanup completed")
 
 # ================================================================
-# MAIN
+# MAIN (CON REUTILIZACIÓN DE IMÁGENES Y CONTROL DE DUPLICADOS)
 # ================================================================
 def main():
     print("="*60)
@@ -1038,6 +1086,8 @@ def main():
     print("   ✓ 10s pauses between generations")
     print("   ✓ Today's news (NewsAPI)")
     print("   ✓ Category: People & Blogs (22)")
+    print("   ✓ IMAGE REUSE: falls back to previous/next segment")
+    print("   ✓ DUPLICATE CONTROL: checks Spanish bot's history too")
     print("="*60)
 
     tz_mexico = ZoneInfo("America/Mexico_City")
@@ -1084,16 +1134,56 @@ def main():
     for seg in segmentos:
         capitulos.append({"bloque": seg.get("block", "CHAPTER")})
     
-    recursos = []
+    # ============================================================
+    # NUEVA LÓGICA DE GENERACIÓN Y REUTILIZACIÓN DE IMÁGENES
+    # ============================================================
+    print("\n🖼️ FIRST PASS: Generating images for all segments...")
+    imagenes_generadas = []
     for idx, seg in enumerate(segmentos):
         print(f"🎬 Segment {idx+1}/{len(segmentos)} - {seg.get('block', '')}")
         prompt_img = seg["image_prompt"]
         img_url = generar_imagen_horizontal(prompt_img, intentos=3)
-        if not img_url:
-            img_path = generar_fondo_solido()
-            img_url = img_path
-            print(f"   🖼️ Using solid background for segment {idx+1}")
-        
+        imagenes_generadas.append(img_url)
+        if img_url:
+            print(f"   ✅ Image generated successfully.")
+        else:
+            print(f"   ❌ Failed to generate image.")
+        time.sleep(10)  # Pausa entre segmentos para no saturar la API
+
+    # ============================================================
+    # SEGUNDA PASADA: Asignar imágenes a los que fallaron
+    # ============================================================
+    print("\n🔄 SECOND PASS: Reusing images for failed segments...")
+
+    def obtener_imagen_disponible(idx, imagenes):
+        # Buscar hacia atrás
+        for i in range(idx - 1, -1, -1):
+            if imagenes[i] is not None:
+                return imagenes[i], f"previous segment {i+1}"
+        # Buscar hacia adelante
+        for i in range(idx + 1, len(imagenes)):
+            if imagenes[i] is not None:
+                return imagenes[i], f"next segment {i+1}"
+        return None, None
+
+    for idx, img_url in enumerate(imagenes_generadas):
+        if img_url is None:
+            img_disponible, origen = obtener_imagen_disponible(idx, imagenes_generadas)
+            if img_disponible:
+                imagenes_generadas[idx] = img_disponible
+                print(f"   ✅ Segment {idx+1}: using image from {origen}")
+            else:
+                # Si no hay ninguna imagen disponible en ningún segmento
+                imagenes_generadas[idx] = generar_fondo_solido()
+                print(f"   🖼️ Segment {idx+1}: using solid background (no image available)")
+
+    # ============================================================
+    # TERCERA PASADA: Generar audio y construir recursos
+    # ============================================================
+    print("\n🎵 Generating audio and building resources...")
+    recursos = []
+    for idx, seg in enumerate(segmentos):
+        print(f"🎬 Generating audio for segment {idx+1}/{len(segmentos)}")
         audio_path = generar_audio(seg["text"], idx)
         if not audio_path:
             continue
@@ -1104,14 +1194,14 @@ def main():
             dur = 10.0
         
         recursos.append({
-            "imagen_url": img_url,
+            "imagen_url": imagenes_generadas[idx],
             "audio_path": audio_path,
             "duracion": dur,
             "texto": seg["text"],
             "bloque": seg.get("block", "")
         })
-        time.sleep(15)
-    
+        time.sleep(2)  # Pequeña pausa entre audios
+
     if not recursos:
         print("❌ No resources generated.")
         sys.exit(1)
