@@ -257,62 +257,72 @@ def obtener_tema_trending():
         return None
 
 # ================================================================
-# GENERACIÓN DE IDEAS (EN INGLÉS)
+# GENERACIÓN DE IDEAS CON 25 FORMATOS (EN INGLÉS)
 # ================================================================
 def generar_idea_video_largo(tipo, fecha_actual):
     prompt = f"""
-You are a VIRAL CONTENT STRATEGIST for YouTube in the finance/crypto niche.
+You are a CONTENT STRATEGIST for YouTube LONG-FORMAT videos (7-9 minutes) in the finance/crypto niche.
 
 📅 CURRENT DATE: {fecha_actual}
-⚠️ IMPORTANT: DO NOT use past dates like 2020, 2021, 2022, 2023 or 2024.
-   Use the current date ({fecha_actual}) or references like "today", "this week".
+⚠️ IMPORTANT: DO NOT use past dates like 2020-2024. Use current date or "today".
 
-🎯 RESTRICTION: Vary the amount of money! DO NOT always use $100.
-   Use different amounts like: $50, $200, $500, $1,000, $5,000, or even "only $10".
-   Use different timeframes: 7 days, 14 days, 30 days, 60 days, 90 days, or "1 year".
+🎯 YOUR TASK: Generate 5 diverse LONG VIDEO IDEAS covering different ANGLES within finance/crypto.
 
-🎯 CHALLENGE TYPES (choose a different one each time):
-   1. "Grow a small amount into a large amount" (e.g., $50 → $5,000).
-   2. "Follow a strategy blindly" (e.g., a trading bot, a guru's picks).
-   3. "Avoid common mistakes" (e.g., "I made these 3 mistakes so you don't have to").
-   4. "Test a controversial method" (e.g., "Is this crypto mining method a scam?").
-   5. "Compare two strategies" (e.g., "Day trading vs. holding: which wins?").
-   6. "Survival challenge" (e.g., "Can you survive 30 days without checking your portfolio?").
-   7. "Reverse psychology" (e.g., "Do the opposite of what everyone is doing").
-   8. "Extreme risk" (e.g., "I invested in the most volatile coin").
-   9. "Educational breakdown" (e.g., "How does a crypto scam actually work?").
-   10. "Personal story" (e.g., "How I lost $10,000 and what I learned").
+🎯 AVAILABLE FORMATS (choose a DIFFERENT one for each idea):
+1. NEWS BREAKDOWN: Deep dive into a recent financial news event (e.g., Fed rate decision, inflation report, Bitcoin ETF flow).
+2. EDUCATIONAL CONCEPT: Teach a comprehensive financial concept (e.g., "How to build a diversified portfolio", "Understanding market cycles").
+3. PSYCHOLOGY & BEHAVIOR: Analyze investor psychology in depth (e.g., "Why do we panic sell?", "The psychology of market bubbles").
+4. MARKET ANALYSIS: Full market update with data and charts (e.g., "Bitcoin dominance and altcoin season", "Global macro outlook").
+5. HISTORICAL LESSON: In-depth lesson from a past financial event (e.g., "The 2008 crisis explained", "What really happened at FTX").
+6. COMPARISON: Compare two assets or strategies comprehensively (e.g., "Bitcoin vs. Gold: which is the better hedge?", "Active vs. Passive investing").
+7. TIP & STRATEGY: Detailed practical guide (e.g., "How to secure your crypto assets", "How to read financial statements").
+8. MYTH BUSTING: Debunk common financial myths with evidence (e.g., "Is gold always a safe haven?", "Are all altcoins scams?").
+9. EXPERT OPINION: Analyze and summarize expert views (e.g., "What do the world's top investors think about Bitcoin?").
+10. DATA HIGHLIGHT: Deep dive into surprising data (e.g., "Why 70% of retail traders lose money", "Bitcoin's energy consumption: facts vs. fiction").
+11. INTERVIEW SUMMARY: Summarize a key interview or statement from a CEO or influencer.
+12. COUNTRY ANALYSIS: Deep dive into crypto adoption or regulation in a specific country.
+13. BLOCKCHAIN TECHNOLOGY: Explain a technical concept in detail (e.g., "What is Layer 2?", "Proof of Stake vs. Proof of Work").
+14. ADVANCED TRADING: Detailed trading strategy (e.g., "How to use stop-loss and take-profit orders", "Technical analysis patterns").
+15. REGULATION UPDATE: Comprehensive discussion of new laws or regulations affecting crypto/finance.
+16. SUSTAINABILITY & MINING: Environmental impact of crypto mining and sustainable solutions.
+17. SUCCESS STORY: Deep dive into a successful investor or trader's strategy.
+18. FAILURE STORY: In-depth analysis of a loss or mistake and lessons learned.
+19. PREDICTION: Detailed prediction about future trends or prices.
+20. TECHNICAL ANALYSIS: Explain chart patterns in detail (e.g., "Cup and handle", "Head and shoulders").
+21. EXCHANGE COMPARISON: Comprehensive comparison of two popular exchanges.
+22. SECURITY BEST PRACTICES: In-depth security guide (e.g., "How to avoid phishing scams", "Hardware wallets explained").
+23. DEFI DEEP DIVE: Explain a DeFi protocol in detail (e.g., "What is Uniswap?", "How yield farming works").
+24. NFT & METAVERSE: Deep dive into the impact of NFTs or the metaverse on finance.
+25. GEOPOLITICAL IMPACT: How global events affect markets.
 
 🎯 PREVENT REPETITION:
-   - DO NOT use "$100" as the amount if it was used recently.
-   - DO NOT use "30 days" if it was used recently.
-   - DO NOT use "turn $X into $Y" if it was used recently.
-   - Choose a DIFFERENT amount and a DIFFERENT timeframe.
+- DO NOT use the same format twice.
+- DO NOT always use "$100" or "30 days" – vary amounts and timeframes.
+- AVOID sensationalist titles like "turned $X into $Y" – prefer informative hooks.
+- COVER different topics: macroeconomics, education, psychology, technology, regulation, etc.
 
-CONTENT TYPE: {tipo} (educational, scam, psychology, analysis, news)
+CONTENT TYPE: {tipo} (news, educational, scam, psychology, analysis)
 
-Your task is to generate 5 VIDEO IDEAS (for LONG format, 7-9 minutes) that follow these principles:
-1. RESTRICTION: The creator imposes a limitation (choose a different amount, different timeframe).
-2. CHALLENGE: Measurable goal (but not always "grow money", could be "avoid losing" or "learn to trade").
-3. TRANSFORMATION: Before and after (e.g., "from skeptical to believer", "from loser to winner").
+Your task is to generate 5 VIDEO IDEAS following the formats above.
 
 For each idea, write:
-- Title (60-70 characters, with emoji and keyword, generating CURIOSITY). DO NOT use the same wording as previous videos.
-- 1-2 line description explaining the restriction/challenge.
+- Title (60-70 characters, with emoji, generating CURIOSITY but realistic).
+- 1-2 line description explaining the topic.
+- Format used (from the list above).
 - Curiosity level (1-10).
 
-Then CHOOSE THE BEST IDEA (the one with the most curiosity and the most DIFFERENT from previous ones) and return it.
+Then CHOOSE THE BEST IDEA (the one with the most curiosity and the most DIFFERENT from previous videos) and return it.
 
 RESPONSE IN JSON:
 {{
     "best_idea": {{
         "title": "Final title with curiosity (no past dates)",
         "description": "Idea description",
-        "restriction": "What is the restriction or challenge",
+        "format": "Name of the format used (e.g., 'Educational Concept')",
         "type": "{tipo}"
     }},
     "ideas_generated": [
-        {{"title": "...", "description": "...", "curiosity": 8}},
+        {{"title": "...", "description": "...", "format": "...", "curiosity": 8}},
         ...
     ]
 }}
@@ -433,48 +443,92 @@ RETURN ONLY THE EXPANDED SCRIPT TEXT, with the same blocks [HOOK], [INTRO], [PRO
         return None
 
 # ================================================================
-# GENERAR GUION LARGO (EN INGLÉS)
+# GENERAR GUION LARGO (CON FORMATOS Y TEMAS VARIADOS)
 # ================================================================
 def generar_guion_largo(tipo, fecha_actual, idea=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "None yet."
 
-    TEMAS_EDUCATIVOS = [
-        "How to Invest in Cryptocurrency Safely (Complete Guide)",
-        "Bitcoin and Gold: Safe Havens in Economic Crisis",
-        "Technical vs Fundamental Analysis: Which is Better for You",
-        "The 5 Financial Levels That Will Lead You to Wealth",
-        "How Compound Interest Works and Why Not Using It Makes You Poor",
-        "Portfolio Diversification Strategies for 2026",
-        "How to Identify a Cryptocurrency with Potential (Fundamentals)",
-        "Decentralized Finance (DeFi): Opportunities and Risks",
-        "How to Read a Trading Chart (Beginner's Guide)",
-        "Passive vs Active Investing: Which One Suits You Best"
-    ]
-    TEMAS_ESTAFAS_CRISIS = [
-        "The Collapse of FTX: Lessons Learned",
-        "How to Detect Pyramid Schemes in Crypto",
-        "The Enron Case: The Biggest Corporate Fraud",
-        "The Subprime Mortgage Crisis and Its Parallel with Crypto",
-        "Mt. Gox: The Bitcoin Theft That Changed Everything",
-        "The OneCoin Scam: The Fake Bitcoin That Fooled the World",
-        "Market Manipulation: How the Big Players Move Prices",
-        "Scam Alerts on Exchanges (Real Cases)"
-    ]
-    TEMAS_PSICOLOGIA = [
-        "FOMO and Panic: How to Master Your Emotions in Trading",
-        "The 4 Mental Bugs That Keep You Poor (and How to Fix Them)",
-        "Discipline vs Money: The Habits of the Rich",
-        "Wealth Mindset: How to Attract Money",
-        "Stop Being a Salary Slave: 3 Steps to Financial Freedom"
-    ]
-    TEMAS_ANALISIS = [
-        "SHIBA INU Analysis: Will It Reach 1 Cent?",
-        "Bitcoin Analysis: Ready for the Next ATH?",
-        "Ethereum vs Solana: Who Will Win in the Future?",
-        "Helium (HNT): Mining Without Graphics Cards, Is It Worth It?",
-        "Bittorrent (BTT): The Sleeping Giant of Storage",
-        "New Altcoins with X10 Potential (Project Analysis)"
+    # AMPLIA LISTA DE TEMAS REALES (60+ temas variados)
+    TEMAS_REALES = [
+        # Noticias macro
+        "Federal Reserve interest rate decision and its impact on crypto",
+        "Inflation report: CPI data exceeds expectations",
+        "Bitcoin ETF inflows reach record high",
+        "US dollar strength and its effect on Bitcoin",
+        "Oil prices surge: implications for global markets",
+        "China's economy slows down: impact on crypto",
+        "European Central Bank rate cut expectations",
+        "Global recession fears: are we heading for a downturn?",
+        "US jobs report beats estimates: what it means for markets",
+        "Japan's interest rate policy and crypto markets",
+        # Educación
+        "How to build a diversified crypto portfolio",
+        "Understanding market cycles: bull and bear markets explained",
+        "How to read financial statements for crypto projects",
+        "What is a stablecoin and how does it work?",
+        "How to set up a crypto wallet safely",
+        "What is staking and how does it generate yield?",
+        "Understanding blockchain technology in depth",
+        "What is a smart contract and how does it work?",
+        "What is an ETF and how does it work?",
+        "What is dollar-cost averaging and why it works?",
+        # Psicología
+        "Why do most traders lose money? Psychology explained",
+        "How to overcome FOMO in crypto",
+        "The importance of risk management in investing",
+        "Why panic selling is usually a mistake",
+        "How to stay calm during market crashes",
+        "What is the 'fear and greed index' and why it matters?",
+        "The psychology of market cycles: from euphoria to despair",
+        # Análisis de mercado
+        "Bitcoin dominance: what it means for altcoins",
+        "Ethereum's transition to proof-of-stake: the full story",
+        "Solana vs. Ethereum: which is better for the future?",
+        "Layer 2 scaling solutions explained in depth",
+        "What is DeFi and why is it important?",
+        "RWA tokenization: the next big trend",
+        "Altcoin season: what it is and when it happens",
+        "Bitcoin halving: what it is and why it matters",
+        # Eventos históricos
+        "What we learned from the FTX collapse",
+        "The 2008 financial crisis and Bitcoin's origin",
+        "Mt. Gox hack: lessons for investors",
+        "The 2020 COVID crash and recovery",
+        "How the 2022 bear market shaped crypto",
+        "The 2017 bull run and its aftermath",
+        # Consejos prácticos
+        "How to use dollar-cost averaging effectively",
+        "Why you should never share your private keys",
+        "How to spot a crypto scam early",
+        "How to choose a reliable exchange",
+        "How to secure your crypto with a hardware wallet",
+        "How to research a cryptocurrency before buying",
+        "How to create a diversified crypto portfolio",
+        # Mitos
+        "Is Bitcoin a bubble? Debunking the myth",
+        "Is gold always a safe haven?",
+        "Can you get rich overnight with crypto? The truth",
+        "Are all altcoins scams? The reality",
+        "Is crypto dead after a crash?",
+        # Datos sorprendentes
+        "70% of retail traders lose money: the data behind the statistic",
+        "Bitcoin's energy consumption: facts vs. fiction",
+        "How much crypto is held by institutions?",
+        "The average crypto investor's portfolio composition",
+        # Tecnología
+        "What is a rollup? Layer 2 explained",
+        "Zero-knowledge proofs: what they are and why they matter",
+        "The future of blockchain interoperability",
+        # Regulación
+        "Crypto regulation in the US: what's changing",
+        "Europe's MiCA regulation explained",
+        "How regulation affects crypto prices",
+        # DeFi y Web3
+        "What is Uniswap? DeFi explained",
+        "Yield farming: what it is and how it works",
+        "What are DAOs? Decentralized organizations explained",
+        "Web3: the future of the internet?"
     ]
 
     if not idea:
@@ -483,33 +537,22 @@ def generar_guion_largo(tipo, fecha_actual, idea=None):
         if idea_data and "best_idea" in idea_data:
             idea = idea_data["best_idea"]
             print(f"   ✅ Selected idea: {idea['title']}")
-            print(f"   🔥 Restriction: {idea['restriction']}")
+            print(f"   📌 Format: {idea.get('format', 'general')}")
         else:
             print("⚠️ No idea generated, using fallback topic.")
-            if tipo == "news":
-                trending = obtener_tema_trending()
-                if trending:
-                    idea = {"title": trending, "restriction": "Today's news"}
-                else:
-                    idea = {"title": random.choice(TEMAS_EDUCATIVOS), "restriction": "Financial education"}
-            elif tipo == "educational":
-                idea = {"title": random.choice(TEMAS_EDUCATIVOS), "restriction": "Financial concept"}
-            elif tipo == "scam":
-                idea = {"title": random.choice(TEMAS_ESTAFAS_CRISIS), "restriction": "Real case"}
-            elif tipo == "psychology":
-                idea = {"title": random.choice(TEMAS_PSICOLOGIA), "restriction": "Financial psychology"}
-            else:
-                idea = {"title": random.choice(TEMAS_ANALISIS), "restriction": "Market analysis"}
+            tema_aleatorio = random.choice(TEMAS_REALES)
+            idea = {"title": tema_aleatorio, "restriction": "Educational content", "format": "Educational Concept"}
 
     tema_elegido = idea["title"]
     restriccion = idea.get("restriction", "Financial challenge")
+    formato = idea.get("format", "Educational Concept")
 
     prompt = f"""
 You are a PROFESSIONAL SCRIPTWRITER and FINANCE EXPERT. Write a DETAILED script for a 7-9 minute YouTube video.
 
 📌 VIDEO IDEA: "{tema_elegido}"
-📌 RESTRICTION/CHALLENGE: "{restriccion}"
-📌 TYPE: {tipo}
+📌 FORMAT TYPE: {formato}
+📌 CONTENT TYPE: {tipo.upper()}
 📅 CURRENT DATE: {fecha_actual}
 
 ⚠️ DATE RULE (VERY IMPORTANT):
@@ -523,9 +566,9 @@ You are a PROFESSIONAL SCRIPTWRITER and FINANCE EXPERT. Write a DETAILED script 
 - Each block must have the indicated length.
 
 🎯 MANDATORY STRUCTURE (based on CHALLENGE → PROCESS → RESULT):
-[HOOK - 0:00] Present the challenge in an impactful way (e.g., "I'm going to try X in 30 days").
-[INTRO - 0:15] Explain why this challenge is interesting and what is needed. (150-200 words)
-[PROBLEM - 1:30] Show the initial obstacles, doubts, fears. (200-250 words)
+[HOOK - 0:00] Present the challenge or topic in an impactful way (e.g., "I'm going to try X in 30 days" or "Did you know that...").
+[INTRO - 0:15] Explain why this topic is interesting and what is needed. (150-200 words)
+[PROBLEM - 1:30] Show the initial obstacles, doubts, fears, or the core issue. (200-250 words)
 [DEVELOPMENT - 3:00] The step-by-step process, with moments of tension and learning. (300-350 words)
 [SOLUTION - 5:00] The strategy used to overcome obstacles, the climax. (250-300 words)
 [CLOSE - 7:00] Final result (was it achieved or not?), reflection and CTA. (200-250 words)
@@ -547,10 +590,10 @@ Each block will have a specific image prompt for Agnes.
 - Allowed: graphics, coins, data, visualizations, maps, technology.
 
 🎯 THUMBNAIL DESIGN (IMPORTANT):
-Create a prompt in ENGLISH for Agnes to generate the BACKGROUND of the thumbnail. The background should reflect the CHALLENGE.
+Create a prompt in ENGLISH for Agnes to generate the BACKGROUND of the thumbnail.
 - Style: "crypto YouTube thumbnail", neon, high contrast, cinematic, hyperrealistic.
 - PROHIBITED: people, faces, text.
-- Allowed: a visual goal (e.g., a giant coin, an upward graph, a path with an X at the end).
+- Allowed: a visual representation of the topic (e.g., a giant coin, an upward graph, a path with an X at the end).
 - Size: 1280x720 (horizontal).
 
 🎯 TAGS RULES (CRITICAL FOR YOUTUBE):
@@ -1068,7 +1111,7 @@ def subir_a_youtube(video_path, titulo, etiquetas_str, descripcion, miniatura_pa
     # Si no hay tags válidos, usar unos por defecto
     if not tags:
         print("⚠️ No valid tags found. Using default tags.")
-        tags = ["finance", "investing", "crypto", "trading", "challenge"]
+        tags = ["finance", "investing", "crypto", "trading", "analysis"]
     
     # Asegurar que no excedan 500 caracteres
     tags_str_final = ",".join(tags)
@@ -1143,7 +1186,8 @@ def limpiar_archivos_temporales():
 def main():
     print("="*60)
     print("🎬 Capital Minds - LONG VIDEO BOT (ENGLISH VERSION)")
-    print("   ✓ Idea generation with restriction/challenge")
+    print("   ✓ 25+ different formats to ensure variety")
+    print("   ✓ 60+ real financial topics")
     print("   ✓ Challenge → Process → Result structure")
     print("   ✓ Curiosity-driven titles (no past dates)")
     print("   ✓ Enhanced thumbnail with neon text")
@@ -1153,6 +1197,7 @@ def main():
     print("   ✓ IMAGE REUSE: falls back to previous/next segment")
     print("   ✓ DUPLICATE CONTROL: checks Spanish bot's history too")
     print("   ✓ TAGS VALIDATION: ensures YouTube-compatible tags")
+    print("   ✓ Formats: News, Education, Psychology, Analysis, History, Comparisons, Tips, Myths, Expert Opinions, Data, Interviews, Country Analysis, Blockchain Tech, Trading, Regulation, Sustainability, Success/Failure Stories, Predictions, Technical Analysis, Exchange Comparisons, Security, DeFi, NFTs, Geopolitics")
     print("="*60)
 
     tz_mexico = ZoneInfo("America/Mexico_City")
@@ -1170,7 +1215,7 @@ def main():
         print("✅ Long video already published today. Exiting.")
         sys.exit(0)
     
-    tipos = ["news", "educational", "scam", "psychology", "analysis"]
+    tipos = ["news", "educational", "psychology", "analysis"]
     tipo = random.choice(tipos)
     print(f"📌 Type: {tipo.upper()}")
     
@@ -1182,7 +1227,7 @@ def main():
     if idea_data and "best_idea" in idea_data:
         idea = idea_data["best_idea"]
         print(f"   ✅ Selected idea: {idea['title']}")
-        print(f"   🔥 Restriction: {idea['restriction']}")
+        print(f"   📌 Format: {idea.get('format', 'general')}")
     else:
         print("⚠️ No idea generated, using fallback topic.")
         idea = None
