@@ -291,7 +291,7 @@ def truncar_texto(texto):
     return truncado
 
 # ================================================================
-# GENERACIÓN DE IDEAS (EN INGLÉS) - CON FORMATOS VARIADOS
+# GENERACIÓN DE IDEAS (CON 25 FORMATOS)
 # ================================================================
 def generar_idea_video(tipo, fecha_actual):
     prompt = f"""
@@ -300,9 +300,9 @@ You are a CONTENT STRATEGIST for YouTube Shorts in the finance/crypto niche.
 📅 CURRENT DATE: {fecha_actual}
 ⚠️ IMPORTANT: DO NOT use past dates like 2020-2024. Use current date or "today".
 
-🎯 YOUR TASK: Generate 5 diverse SHORT VIDEO IDEAS (30-60 seconds) that cover different aspects of finance, not just money challenges.
+🎯 YOUR TASK: Generate 5 diverse SHORT VIDEO IDEAS (30-60 seconds) covering different ANGLES within finance/crypto.
 
-🎯 MANDATORY FORMATS (choose a DIFFERENT one for each idea):
+🎯 AVAILABLE FORMATS (choose a DIFFERENT one for each idea):
 1. NEWS BREAKDOWN: Explain a recent financial news event (e.g., Fed rate decision, inflation report, Bitcoin ETF flow).
 2. EDUCATIONAL CONCEPT: Teach a basic financial concept (e.g., "What is a bear market?", "How does staking work?").
 3. PSYCHOLOGY & BEHAVIOR: Analyze investor psychology (e.g., "Why do we panic sell?", "How to avoid FOMO").
@@ -313,11 +313,27 @@ You are a CONTENT STRATEGIST for YouTube Shorts in the finance/crypto niche.
 8. MYTH BUSTING: Debunk a common financial myth (e.g., "Is gold always a safe haven?").
 9. EXPERT OPINION: Summarize an expert's view on a topic (e.g., "What does Cathie Wood say about Bitcoin?").
 10. DATA HIGHLIGHT: Show a surprising data point (e.g., "70% of retail traders lose money").
+11. INTERVIEW SUMMARY: Summarize a key interview or statement from a CEO or influencer.
+12. COUNTRY ANALYSIS: Analyze crypto adoption or regulation in a specific country.
+13. BLOCKCHAIN TECHNOLOGY: Explain a technical concept (e.g., "What is Layer 2?", "Proof of Stake").
+14. ADVANCED TRADING: Share a trading strategy (e.g., "How to use stop-loss orders").
+15. REGULATION UPDATE: Discuss new laws or regulations affecting crypto/finance.
+16. SUSTAINABILITY & MINING: Discuss the environmental impact of crypto mining and solutions.
+17. SUCCESS STORY: Tell a story of a successful investor or trader.
+18. FAILURE STORY: Tell a story of a loss or mistake and the lesson learned.
+19. PREDICTION: Make a prediction about future trends or prices.
+20. TECHNICAL ANALYSIS: Explain a chart pattern (e.g., "Cup and handle", "Head and shoulders").
+21. EXCHANGE COMPARISON: Compare two popular exchanges (e.g., "Binance vs. Coinbase").
+22. SECURITY BEST PRACTICES: Give security tips (e.g., "How to avoid phishing scams").
+23. DEFI DEEP DIVE: Explain a DeFi protocol (e.g., "What is Uniswap?").
+24. NFT & METAVERSE: Discuss the impact of NFTs or the metaverse on finance.
+25. GEOPOLITICAL IMPACT: Explain how global events affect markets.
 
 🎯 PREVENT REPETITION:
 - DO NOT use the same format twice in the 5 ideas.
 - DO NOT always use "$100" or "30 days" – vary amounts and timeframes.
 - AVOID sensationalist titles like "turned $X into $Y" – prefer informative hooks.
+- COVER different topics: macroeconomics, education, psychology, technology, regulation, etc.
 
 CONTENT TYPE: {tipo} (news, educational, scam, psychology, analysis)
 
@@ -336,7 +352,7 @@ RESPONSE IN JSON:
     "best_idea": {{
         "title": "Final title with curiosity (no past dates)",
         "description": "Idea description",
-        "format": "Name of the format used",
+        "format": "Name of the format used (e.g., 'Educational Concept')",
         "type": "{tipo}"
     }},
     "ideas_generated": [
@@ -392,7 +408,7 @@ def extraer_bloques(texto):
     return [texto]
 
 # ================================================================
-# GENERAR GUION SHORT (EN INGLÉS) - CON TEMAS REALES Y VARIADOS
+# GENERAR GUION SHORT (CON FORMATOS VARIADOS Y TEMAS REALES)
 # ================================================================
 def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
     if not fecha_actual:
@@ -401,7 +417,7 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "None yet."
 
-    # AMPLIA LISTA DE TEMAS REALES (evita que DeepSeek invente desafíos)
+    # AMPLIA LISTA DE TEMAS REALES (60+ temas variados)
     TEMAS_REALES = [
         # Noticias macro
         "Federal Reserve interest rate decision and its impact on crypto",
@@ -412,6 +428,8 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         "China's economy slows down: impact on crypto",
         "European Central Bank rate cut expectations",
         "Global recession fears: are we heading for a downturn?",
+        "US jobs report beats estimates: what it means for markets",
+        "Japan's interest rate policy and crypto markets",
         # Educación
         "What is a bear market and how to survive it",
         "How to read a candlestick chart",
@@ -421,6 +439,8 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         "What is staking and how does it generate yield?",
         "Understanding blockchain technology in 60 seconds",
         "What is a smart contract?",
+        "What is an ETF and how does it work?",
+        "What is dollar-cost averaging?",
         # Psicología
         "Why do most traders lose money? Psychology explained",
         "How to overcome FOMO in crypto",
@@ -428,6 +448,7 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         "Why panic selling is usually a mistake",
         "How to stay calm during market crashes",
         "What is the 'fear and greed index' and why it matters?",
+        "The psychology of market cycles",
         # Análisis de mercado
         "Bitcoin dominance: what it means for altcoins",
         "Ethereum's transition to proof-of-stake: explained",
@@ -435,12 +456,15 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         "Layer 2 scaling solutions explained",
         "What is DeFi and why is it important?",
         "RWA tokenization: the next big trend",
+        "Altcoin season: what it is and when it happens",
+        "Bitcoin halving: what it is and why it matters",
         # Eventos históricos
         "What we learned from the FTX collapse",
         "The 2008 financial crisis and Bitcoin's origin",
         "Mt. Gox hack: lessons for investors",
         "The 2020 COVID crash and recovery",
         "How the 2022 bear market shaped crypto",
+        "The 2017 bull run and its aftermath",
         # Consejos prácticos
         "How to use dollar-cost averaging",
         "Why you should never share your private keys",
@@ -448,15 +472,31 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         "How to choose a reliable exchange",
         "How to secure your crypto with a hardware wallet",
         "How to research a cryptocurrency before buying",
+        "How to create a diversified crypto portfolio",
         # Mitos
         "Is Bitcoin a bubble? Debunking the myth",
         "Is gold always a safe haven?",
         "Can you get rich overnight with crypto? The truth",
         "Are all altcoins scams? The reality",
+        "Is crypto dead after a crash?",
         # Datos sorprendentes
         "70% of retail traders lose money: the data",
         "Bitcoin's energy consumption: facts vs. fiction",
-        "How much crypto is held by institutions?"
+        "How much crypto is held by institutions?",
+        "The average crypto investor's portfolio composition",
+        # Tecnología
+        "What is a rollup? Layer 2 explained",
+        "Zero-knowledge proofs: what they are and why they matter",
+        "The future of blockchain interoperability",
+        # Regulación
+        "Crypto regulation in the US: what's changing",
+        "Europe's MiCA regulation explained",
+        "How regulation affects crypto prices",
+        # DeFi y Web3
+        "What is Uniswap? DeFi explained",
+        "Yield farming: what it is and how it works",
+        "What are DAOs? Decentralized organizations explained",
+        "Web3: the future of the internet?"
     ]
 
     if not idea:
@@ -469,11 +509,11 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
         else:
             print("⚠️ No idea generated, using fallback topic.")
             tema_aleatorio = random.choice(TEMAS_REALES)
-            idea = {"title": tema_aleatorio, "restriction": "Educational content", "format": "educational"}
+            idea = {"title": tema_aleatorio, "restriction": "Educational content", "format": "Educational Concept"}
 
     tema_elegido = idea["title"]
     restriccion = idea.get("restriction", "Financial education")
-    formato = idea.get("format", "educational")
+    formato = idea.get("format", "Educational Concept")
 
     prompt = f"""
 You are a FINANCE EXPERT and EDUCATIONAL CONTENT CREATOR for YouTube SHORTS.
@@ -704,6 +744,8 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
         elementos_tema = "dramatic financial collapse scene, crisis atmosphere, concerned professionals"
     elif "inflation" in tema_lower or "fed" in tema_lower:
         elementos_tema = "macroeconomic data, inflation charts, central bank environment"
+    elif "etf" in tema_lower:
+        elementos_tema = "stock market data, ETF flows, financial institutions"
     else:
         elementos_tema = "modern financial setting, professional environment"
 
@@ -1272,7 +1314,8 @@ def limpiar_archivos_temporales():
 def main():
     print("="*60)
     print("🎬 Capital Minds - SHORTS BOT (ENGLISH VERSION)")
-    print("   ✓ Idea generation with restriction/challenge")
+    print("   ✓ 25+ different formats to ensure variety")
+    print("   ✓ 60+ real financial topics")
     print("   ✓ Curiosity-driven titles (no past dates)")
     print("   ✓ Challenge → Process → Result structure")
     print("   ✓ Enhanced thumbnail with neon text")
@@ -1282,7 +1325,7 @@ def main():
     print("   ✓ IMAGE REUSE: falls back to previous segment")
     print("   ✓ DUPLICATE CONTROL: checks Spanish bot's history too")
     print("   ✓ TAGS VALIDATION: ensures YouTube-compatible tags")
-    print("   ✓ VARIED CONTENT: 10 different formats to avoid repetition")
+    print("   ✓ Formats: News, Education, Psychology, Analysis, History, Comparisons, Tips, Myths, Expert Opinions, Data, Interviews, Country Analysis, Blockchain Tech, Trading, Regulation, Sustainability, Success/Failure Stories, Predictions, Technical Analysis, Exchange Comparisons, Security, DeFi, NFTs, Geopolitics")
     print("="*60)
 
     tz_mexico = ZoneInfo("America/Mexico_City")
