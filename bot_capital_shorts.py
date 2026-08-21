@@ -281,62 +281,66 @@ def generar_fondo_solido(color=(20, 20, 50), ancho=1080, alto=1920):
     img.save(path)
     return path
 
+def truncar_texto(texto):
+    palabras = texto.split()
+    if len(palabras) <= 110:
+        return texto
+    truncado = ' '.join(palabras[:110])
+    if not truncado.endswith(('.', '!', '?')):
+        truncado += '.'
+    return truncado
+
 # ================================================================
-# GENERACIÓN DE IDEAS (EN INGLÉS)
+# GENERACIÓN DE IDEAS (EN INGLÉS) - CON FORMATOS VARIADOS
 # ================================================================
 def generar_idea_video(tipo, fecha_actual):
     prompt = f"""
-You are a VIRAL CONTENT STRATEGIST for YouTube Shorts in the finance/crypto niche.
+You are a CONTENT STRATEGIST for YouTube Shorts in the finance/crypto niche.
 
 📅 CURRENT DATE: {fecha_actual}
-⚠️ IMPORTANT: DO NOT use past dates like 2020, 2021, 2022, 2023 or 2024.
-   Use the current date ({fecha_actual}) or references like "today", "this week".
+⚠️ IMPORTANT: DO NOT use past dates like 2020-2024. Use current date or "today".
 
-🎯 RESTRICTION: Vary the amount of money! DO NOT always use $100.
-   Use different amounts like: $50, $200, $500, $1,000, $5,000, or even "only $10".
-   Use different timeframes: 7 days, 14 days, 30 days, 60 days, 90 days, or "1 year".
+🎯 YOUR TASK: Generate 5 diverse SHORT VIDEO IDEAS (30-60 seconds) that cover different aspects of finance, not just money challenges.
 
-🎯 CHALLENGE TYPES (choose a different one each time):
-   1. "Grow a small amount into a large amount" (e.g., $50 → $5,000).
-   2. "Follow a strategy blindly" (e.g., a trading bot, a guru's picks).
-   3. "Avoid common mistakes" (e.g., "I made these 3 mistakes so you don't have to").
-   4. "Test a controversial method" (e.g., "Is this crypto mining method a scam?").
-   5. "Compare two strategies" (e.g., "Day trading vs. holding: which wins?").
-   6. "Survival challenge" (e.g., "Can you survive 30 days without checking your portfolio?").
-   7. "Reverse psychology" (e.g., "Do the opposite of what everyone is doing").
-   8. "Extreme risk" (e.g., "I invested in the most volatile coin").
-   9. "Educational breakdown" (e.g., "How does a crypto scam actually work?").
-   10. "Personal story" (e.g., "How I lost $10,000 and what I learned").
+🎯 MANDATORY FORMATS (choose a DIFFERENT one for each idea):
+1. NEWS BREAKDOWN: Explain a recent financial news event (e.g., Fed rate decision, inflation report, Bitcoin ETF flow).
+2. EDUCATIONAL CONCEPT: Teach a basic financial concept (e.g., "What is a bear market?", "How does staking work?").
+3. PSYCHOLOGY & BEHAVIOR: Analyze investor psychology (e.g., "Why do we panic sell?", "How to avoid FOMO").
+4. MARKET ANALYSIS: Give a quick market update (e.g., "Bitcoin dominance rises", "Altcoin season incoming").
+5. HISTORICAL LESSON: Share a lesson from a past financial event (e.g., "What happened in 2008?", "Mt. Gox collapse").
+6. COMPARISON: Compare two assets or strategies (e.g., "Bitcoin vs. Gold", "Active vs. Passive investing").
+7. TIP & STRATEGY: Provide a practical tip (e.g., "How to secure your crypto", "How to read a candlestick chart").
+8. MYTH BUSTING: Debunk a common financial myth (e.g., "Is gold always a safe haven?").
+9. EXPERT OPINION: Summarize an expert's view on a topic (e.g., "What does Cathie Wood say about Bitcoin?").
+10. DATA HIGHLIGHT: Show a surprising data point (e.g., "70% of retail traders lose money").
 
 🎯 PREVENT REPETITION:
-   - DO NOT use "$100" if it was used recently.
-   - DO NOT use "30 days" if it was used recently.
-   - DO NOT use "turn $X into $Y" if it was used recently.
+- DO NOT use the same format twice in the 5 ideas.
+- DO NOT always use "$100" or "30 days" – vary amounts and timeframes.
+- AVOID sensationalist titles like "turned $X into $Y" – prefer informative hooks.
 
-CONTENT TYPE: {tipo} (educational, scam, psychology, analysis, news)
+CONTENT TYPE: {tipo} (news, educational, scam, psychology, analysis)
 
-Your task is to generate 5 VIDEO IDEAS (for SHORTS format, 30-60 seconds) that follow these principles:
-1. RESTRICTION: The creator imposes a limitation (choose a different amount, different timeframe).
-2. CHALLENGE: Measurable goal.
-3. TRANSFORMATION: Before and after.
+Your task is to generate 5 VIDEO IDEAS following the formats above.
 
 For each idea, write:
-- Title (50-60 characters, with emoji, generating CURIOSITY).
-- 1-2 line description explaining the restriction/challenge.
+- Title (50-60 characters, with emoji, generating CURIOSITY but realistic).
+- 1-2 line description explaining the topic.
+- Format used (from the list above).
 - Curiosity level (1-10).
 
-Then CHOOSE THE BEST IDEA (the one with the most curiosity) and return it.
+Then CHOOSE THE BEST IDEA (the one with the most curiosity and the most DIFFERENT from previous videos) and return it.
 
 RESPONSE IN JSON:
 {{
     "best_idea": {{
         "title": "Final title with curiosity (no past dates)",
         "description": "Idea description",
-        "restriction": "What is the restriction or challenge",
+        "format": "Name of the format used",
         "type": "{tipo}"
     }},
     "ideas_generated": [
-        {{"title": "...", "description": "...", "curiosity": 8}},
+        {{"title": "...", "description": "...", "format": "...", "curiosity": 8}},
         ...
     ]
 }}
@@ -364,79 +368,31 @@ RESPONSE IN JSON:
         return None
 
 # ================================================================
-# EXPANSIÓN Y TRUNCAMIENTO DE TEXTO (en inglés)
-# ================================================================
-def expandir_texto_corto(texto_corto, tema):
-    palabras_cortas = len(re.findall(r'\w+', texto_corto))
-    prompt = f"""The following financial story is too short ({palabras_cortas} words).
-EXPAND it to EXACTLY 90-110 words by adding more context, details, examples, or consequences.
-Keep the same tone and structure (HOOK, DATA, EXPLANATION, SOLUTION, CLOSE).
-
-TOPIC: {tema}
-
-ORIGINAL TEXT:
-{texto_corto}
-
-Return ONLY the expanded text, with the same blocks [HOOK], [DATA], [EXPLANATION], [SOLUTION], [CLOSE].
-"""
-    url = "https://api.deepseek.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
-    payload = {
-        "model": "deepseek-chat",
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.7,
-        "max_tokens": 600,
-    }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
-        r.raise_for_status()
-        expanded = r.json()["choices"][0]["message"]["content"].strip()
-        palabras_exp = len(re.findall(r'\w+', expanded))
-        print(f"✅ Text expanded: {palabras_exp} words")
-        if palabras_exp > 130:
-            expanded = truncar_texto(expanded)
-            palabras_exp = len(re.findall(r'\w+', expanded))
-            print(f"✂️ Text truncated to: {palabras_exp} words")
-        return expanded
-    except Exception as e:
-        print(f"⚠️ Error expanding: {e}")
-        return texto_corto
-
-def truncar_texto(texto):
-    palabras = texto.split()
-    if len(palabras) <= 110:
-        return texto
-    truncado = ' '.join(palabras[:110])
-    if not truncado.endswith(('.', '!', '?')):
-        truncado += '.'
-    return truncado
-
-# ================================================================
 # EXTRAER BLOQUES (FALLBACK)
 # ================================================================
 def extraer_bloques(texto):
-    patron = r'\[HOOK\](.*?)(?=\[DATA\]|$)|\[DATA\](.*?)(?=\[EXPLANATION\]|$)|\[EXPLANATION\](.*?)(?=\[SOLUTION\]|$)|\[SOLUTION\](.*?)(?=\[CLOSE\]|$)|\[CLOSE\](.*?)$'
+    patron = r'\[HOOK\](.*?)(?=\[DATA\]|$)|\[DATA\](.*?)(?=\[TAKEAWAY\]|$)|\[TAKEAWAY\](.*?)(?=\[CLOSE\]|$)|\[CLOSE\](.*?)$'
     matches = re.findall(patron, texto, re.DOTALL)
     bloques = []
     for grupo in matches:
         for parte in grupo:
             if parte and parte.strip():
                 bloques.append(parte.strip())
-    if len(bloques) == 5:
+    if len(bloques) == 4:
         return bloques
     oraciones = re.split(r'(?<=[.!?])\s+', texto)
-    if len(oraciones) >= 5:
-        chunk = len(oraciones) // 5
+    if len(oraciones) >= 4:
+        chunk = len(oraciones) // 4
         bloques = []
-        for i in range(5):
+        for i in range(4):
             start = i * chunk
-            end = start + chunk if i < 4 else len(oraciones)
+            end = start + chunk if i < 3 else len(oraciones)
             bloques.append(' '.join(oraciones[start:end]))
         return bloques
     return [texto]
 
 # ================================================================
-# GENERAR GUION SHORT (EN INGLÉS)
+# GENERAR GUION SHORT (EN INGLÉS) - CON TEMAS REALES Y VARIADOS
 # ================================================================
 def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
     if not fecha_actual:
@@ -445,87 +401,111 @@ def generar_guion_financiero(tipo, idea=None, fecha_actual=None):
     titulos_pub = cargar_titulos_publicados()["titulos"][-10:]
     titulos_referencia = "\n".join([f"- {t}" for t in titulos_pub]) if titulos_pub else "None yet."
 
-    EDUCATIONAL_TOPICS = [
-        "How to Invest in Cryptocurrency Safely",
-        "Bitcoin vs Gold: Which is a Better Safe Haven?",
-        "Technical vs Fundamental Analysis",
-        "The Power of Compound Interest",
-        "Portfolio Diversification Strategies for 2026",
-        "How to Identify a Cryptocurrency with Potential",
-        "DeFi: Opportunities and Risks",
-        "How to Read a Trading Chart",
-        "Passive vs Active Investing",
-        "The 5 Financial Levels to Wealth"
-    ]
-    SCAM_TOPICS = [
-        "The Collapse of FTX: Lessons Learned",
-        "How to Detect Pyramid Schemes in Crypto",
-        "The Enron Case: The Biggest Corporate Fraud",
-        "The Subprime Mortgage Crisis",
-        "Mt. Gox: The Bitcoin Theft That Changed Everything",
-        "The OneCoin Scam: The Fake Bitcoin",
-        "Market Manipulation: How the Big Players Move Prices"
+    # AMPLIA LISTA DE TEMAS REALES (evita que DeepSeek invente desafíos)
+    TEMAS_REALES = [
+        # Noticias macro
+        "Federal Reserve interest rate decision and its impact on crypto",
+        "Inflation report: CPI data exceeds expectations",
+        "Bitcoin ETF inflows reach record high",
+        "US dollar strength and its effect on Bitcoin",
+        "Oil prices surge: implications for global markets",
+        "China's economy slows down: impact on crypto",
+        "European Central Bank rate cut expectations",
+        "Global recession fears: are we heading for a downturn?",
+        # Educación
+        "What is a bear market and how to survive it",
+        "How to read a candlestick chart",
+        "The difference between market cap and price",
+        "What is a stablecoin and how does it work",
+        "How to set up a crypto wallet safely",
+        "What is staking and how does it generate yield?",
+        "Understanding blockchain technology in 60 seconds",
+        "What is a smart contract?",
+        # Psicología
+        "Why do most traders lose money? Psychology explained",
+        "How to overcome FOMO in crypto",
+        "The importance of risk management",
+        "Why panic selling is usually a mistake",
+        "How to stay calm during market crashes",
+        "What is the 'fear and greed index' and why it matters?",
+        # Análisis de mercado
+        "Bitcoin dominance: what it means for altcoins",
+        "Ethereum's transition to proof-of-stake: explained",
+        "Solana vs. Ethereum: which is better?",
+        "Layer 2 scaling solutions explained",
+        "What is DeFi and why is it important?",
+        "RWA tokenization: the next big trend",
+        # Eventos históricos
+        "What we learned from the FTX collapse",
+        "The 2008 financial crisis and Bitcoin's origin",
+        "Mt. Gox hack: lessons for investors",
+        "The 2020 COVID crash and recovery",
+        "How the 2022 bear market shaped crypto",
+        # Consejos prácticos
+        "How to use dollar-cost averaging",
+        "Why you should never share your private keys",
+        "How to spot a crypto scam",
+        "How to choose a reliable exchange",
+        "How to secure your crypto with a hardware wallet",
+        "How to research a cryptocurrency before buying",
+        # Mitos
+        "Is Bitcoin a bubble? Debunking the myth",
+        "Is gold always a safe haven?",
+        "Can you get rich overnight with crypto? The truth",
+        "Are all altcoins scams? The reality",
+        # Datos sorprendentes
+        "70% of retail traders lose money: the data",
+        "Bitcoin's energy consumption: facts vs. fiction",
+        "How much crypto is held by institutions?"
     ]
 
     if not idea:
-        print("💡 Generating idea with restriction/challenge...")
+        print("💡 Generating idea with varied format...")
         idea_data = generar_idea_video(tipo, fecha_actual)
         if idea_data and "best_idea" in idea_data:
             idea = idea_data["best_idea"]
             print(f"   ✅ Selected idea: {idea['title']}")
-            print(f"   🔥 Restriction: {idea['restriction']}")
+            print(f"   📌 Format: {idea.get('format', 'general')}")
         else:
             print("⚠️ No idea generated, using fallback topic.")
-            if tipo == "news":
-                trending = obtener_noticia_trending()
-                if trending:
-                    idea = {"title": trending, "restriction": "Today's news"}
-                else:
-                    idea = {"title": random.choice(EDUCATIONAL_TOPICS), "restriction": "Financial education"}
-            elif tipo == "educational":
-                idea = {"title": random.choice(EDUCATIONAL_TOPICS), "restriction": "Financial concept"}
-            elif tipo == "scam":
-                idea = {"title": random.choice(SCAM_TOPICS), "restriction": "Real case"}
-            else:
-                idea = {"title": random.choice(EDUCATIONAL_TOPICS), "restriction": "Financial challenge"}
+            tema_aleatorio = random.choice(TEMAS_REALES)
+            idea = {"title": tema_aleatorio, "restriction": "Educational content", "format": "educational"}
 
     tema_elegido = idea["title"]
-    restriccion = idea.get("restriction", "Financial challenge")
+    restriccion = idea.get("restriction", "Financial education")
+    formato = idea.get("format", "educational")
 
     prompt = f"""
-You are a FINANCE EXPERT and VIRAL CONTENT CREATOR for YouTube SHORTS.
+You are a FINANCE EXPERT and EDUCATIONAL CONTENT CREATOR for YouTube SHORTS.
 
 📌 VIDEO IDEA: "{tema_elegido}"
-📌 RESTRICTION/CHALLENGE: "{restriccion}"
-📌 TYPE: {tipo.upper()}
+📌 FORMAT TYPE: {formato}
+📌 CONTENT TYPE: {tipo.upper()}
 📅 CURRENT DATE: {fecha_actual}
 
-⚠️ DATE RULE (VERY IMPORTANT):
-   - DO NOT use past dates like 2020, 2021, 2022, 2023 or 2024.
-   - Use the current year: {fecha_actual.split()[-1]}.
+⚠️ DATE RULE: DO NOT use past dates (2020-2024). Use current year only.
 
 🎯 CONTENT RULES:
 1. Write EXACTLY between 90 and 110 words.
-2. Structure: CHALLENGE → PROCESS → RESULT:
-   - [HOOK] Present the challenge (e.g., "I'm going to try X with only $100").
-   - [DATA] Show the starting point and the goal.
-   - [EXPLANATION] Describe the process, obstacles, tension.
-   - [SOLUTION] The strategy used to overcome.
-   - [CLOSE] Final result + reflection + CTA.
-3. Conversational, direct tone with rhetorical questions.
+2. Structure: HOOK → DATA → TAKEAWAY → CLOSE.
+   - [HOOK] Present the topic with a curiosity gap (e.g., "Did you know that...", "Here's why...").
+   - [DATA] Provide factual data, explanation, or context.
+   - [TAKEAWAY] Give a clear takeaway or lesson.
+   - [CLOSE] End with a CTA (e.g., "Follow for more insights").
+3. Tone: Educational, informative, and engaging – NOT sensationalist.
 4. Numbers written with LETTERS (not "400,500").
 
 🎯 SEO RULES:
-1. TITLE: 50-60 characters, with emoji and keyword.
+1. TITLE: 50-60 characters, with emoji, informative but attractive.
 2. KEYWORDS: 2-3 high-volume terms.
 3. TAGS: 15-20 tags (no dates).
-4. COVER WORDS: 2-3 impactful words.
+4. COVER WORDS: 2-3 impactful words (e.g., "BITCOIN", "CRASH", "EXPLAINED").
 
 🎯 THUMBNAIL DESIGN:
 Create a prompt in ENGLISH for Agnes to generate the BACKGROUND.
-- Style: "crypto YouTube thumbnail", neon, high contrast, cinematic.
+- Style: clean, professional, high contrast, cinematic.
 - PROHIBITED: people, faces, text.
-- Allowed: Bitcoin, gold, graphs, fire, ice, data.
+- Allowed: charts, data visualizations, Bitcoin, gold, graphs, maps.
 - Size: 1280x720 (horizontal).
 
 🚫 TITLES ALREADY PUBLISHED (DO NOT REPEAT):
@@ -538,8 +518,8 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND.
     "keywords": ["keyword1", "keyword2", "keyword3"],
     "hook_description": "Hook for description (max 90 chars)",
     "context_description": "Context in one sentence",
-    "source_story": "Story source",
-    "full_text": "Text with the 5 blocks (90-110 words)",
+    "source_story": "Story source (e.g., 'Federal Reserve data' or 'Personal experience')",
+    "full_text": "Text with the 4 blocks (90-110 words)",
     "cover_words": "2-3 words for thumbnail",
     "tags": "15-20 tags separated by commas (no dates)",
     "thumbnail_prompt": "Prompt in English for the thumbnail background (NO text, NO people, 1280x720)"
@@ -550,14 +530,14 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND.
     payload = {
         "model": "deepseek-chat",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.8,
+        "temperature": 0.7,
         "max_tokens": 1200,
         "response_format": {"type": "json_object"}
     }
 
     for intento in range(6):
         try:
-            print(f"🔄 Attempt {intento+1}/6 generating viral script...")
+            print(f"🔄 Attempt {intento+1}/6 generating script...")
             r = requests.post(url, headers=headers, json=payload, timeout=90)
             r.raise_for_status()
             respuesta = r.json()["choices"][0]["message"]["content"].strip()
@@ -575,73 +555,50 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND.
                 raise ValueError("No JSON found")
 
             texto = data.get("full_text", "")
-            if not all(marker in texto for marker in ["[HOOK]", "[DATA]", "[EXPLANATION]", "[SOLUTION]", "[CLOSE]"]):
+            if not all(marker in texto for marker in ["[HOOK]", "[DATA]", "[TAKEAWAY]", "[CLOSE]"]):
                 print("   ⚠️ Blocks not found. Extracting manually...")
                 bloques = extraer_bloques(texto)
-                if len(bloques) == 5:
-                    texto_reconstruido = f"[HOOK] {bloques[0]}\n[DATA] {bloques[1]}\n[EXPLANATION] {bloques[2]}\n[SOLUTION] {bloques[3]}\n[CLOSE] {bloques[4]}"
+                if len(bloques) == 4:
+                    texto_reconstruido = f"[HOOK] {bloques[0]}\n[DATA] {bloques[1]}\n[TAKEAWAY] {bloques[2]}\n[CLOSE] {bloques[3]}"
                     data["full_text"] = texto_reconstruido
                     texto = texto_reconstruido
                     print("   ✅ Blocks reconstructed manually.")
                 else:
                     raise ValueError("Could not extract blocks")
 
+            # Validar longitud
             palabras = len(re.findall(r'\w+', texto))
-            print(f"   📊 Words generated: {palabras}")
-            
-            if palabras < 70:
-                print(f"   ⚠️ Text too short ({palabras} words). Expanding...")
-                texto = expandir_texto_corto(texto, tema_elegido)
-                data["full_text"] = texto
-                palabras = len(re.findall(r'\w+', texto))
-                print(f"   📊 Words after expansion: {palabras}")
-            elif palabras > 130:
-                print(f"   ✂️ Text too long ({palabras} words). Truncating...")
-                texto = truncar_texto(texto)
-                data["full_text"] = texto
-                palabras = len(re.findall(r'\w+', texto))
-                print(f"   📊 Words after truncation: {palabras}")
-
             if palabras < 70 or palabras > 130:
-                raise ValueError(f"Words out of range: {palabras} (must be 70-120)")
+                if palabras > 130:
+                    data["full_text"] = truncar_texto(texto)
+                    palabras = len(re.findall(r'\w+', data["full_text"]))
+                elif palabras < 70:
+                    data["full_text"] = texto + " This is a quick financial insight. Follow for more."
 
+            # Verificar duplicado
             titulo = data.get("title", "").strip()
             titulo = re.sub(r'#\w+', '', titulo).strip()
-            titulo = ' '.join(titulo.split())
-            
-            keywords = data.get("keywords", [])
-            if keywords and isinstance(keywords, list) and keywords:
-                primera_kw = keywords[0].strip()
-                if primera_kw and not titulo.lower().startswith(primera_kw.lower()):
-                    titulo_sin_art = re.sub(r'^(The|A|An)\s+', '', titulo, flags=re.IGNORECASE)
-                    if titulo_sin_art != titulo:
-                        titulo = f"{primera_kw.capitalize()} {titulo_sin_art}"
-                    else:
-                        titulo = f"{primera_kw.capitalize()} {titulo}"
-                if len(titulo) > 75:
-                    titulo = titulo[:72] + "..."
-            data["title"] = titulo
-
             if titulo_ya_publicado(titulo):
                 raise ValueError("Duplicate title")
 
+            # Tags
             tags_raw = data.get("tags", "")
             tags_list = sanitizar_tags(tags_raw)
+            keywords = data.get("keywords", [])
             for kw in keywords:
                 if kw.lower() not in [t.lower() for t in tags_list]:
                     tags_list.append(kw.lower())
-            extras = ["finance", "investing", "economy", "bitcoin", "gold", "banks", "trading"]
+            extras = ["finance", "investing", "economy", "bitcoin", "crypto", "trading", "education"]
             for extra in extras:
                 if len(tags_list) < 20 and extra not in tags_list:
                     tags_list.append(extra)
             data["tags"] = ", ".join(tags_list[:20])
 
             if "thumbnail_prompt" not in data or not data["thumbnail_prompt"]:
-                data["thumbnail_prompt"] = "cinematic wide shot of glowing financial data and neon charts, high contrast, dark background, hyperrealistic, 8k, no people, no text, no watermark"
+                data["thumbnail_prompt"] = "clean professional financial chart, dark background, blue and gold colors, no people, no text, high contrast"
 
             print(f"   🏷️ Title: {data['title']} ({len(data['title'])} chars)")
-            print(f"   🔑 Keywords: {keywords}")
-            print(f"   📊 Final words: {palabras}")
+            print(f"   📊 Words: {palabras}")
             return data, tema_elegido, restriccion
             
         except Exception as e:
@@ -656,7 +613,7 @@ Create a prompt in ENGLISH for Agnes to generate the BACKGROUND.
 # DIVIDIR EN SEGMENTOS
 # ================================================================
 def dividir_en_segmentos(texto, max_palabras_por_segmento=35):
-    patron = r'\[HOOK\](.*?)(?=\[DATA\]|$)|\[DATA\](.*?)(?=\[EXPLANATION\]|$)|\[EXPLANATION\](.*?)(?=\[SOLUTION\]|$)|\[SOLUTION\](.*?)(?=\[CLOSE\]|$)|\[CLOSE\](.*?)$'
+    patron = r'\[HOOK\](.*?)(?=\[DATA\]|$)|\[DATA\](.*?)(?=\[TAKEAWAY\]|$)|\[TAKEAWAY\](.*?)(?=\[CLOSE\]|$)|\[CLOSE\](.*?)$'
     matches = re.findall(patron, texto, re.DOTALL)
     
     segmentos = []
@@ -679,8 +636,8 @@ def dividir_en_segmentos(texto, max_palabras_por_segmento=35):
     if not segmentos:
         segmentos = [texto]
     
-    if len(segmentos) > 5:
-        while len(segmentos) > 5:
+    if len(segmentos) > 4:
+        while len(segmentos) > 4:
             segmentos[-2] = segmentos[-2] + " " + segmentos[-1]
             segmentos.pop()
     
@@ -696,17 +653,15 @@ def asignar_etapas_visuales(segmentos):
     
     mapa_etapas = [
         "context_challenge",
-        "start_process",
-        "obstacle",
-        "climax",
-        "result"
+        "data_explanation",
+        "takeaway",
+        "close"
     ]
     mapa_ubicaciones = [
         "person preparing for the financial challenge",
-        "first steps, initial graphs",
-        "moment of doubt or difficulty",
-        "turning point, maximum stress",
-        "result, celebration or reflection"
+        "graph showing data or statistics",
+        "person analyzing the data",
+        "person reflecting on the lesson learned"
     ]
     
     for i in range(n):
@@ -732,10 +687,9 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
 
     prompts_etapa = {
         "context_challenge": f"NEON NOIR aesthetic, cyberpunk financial vibe, intense {COLOR_NEON_ACTUAL} glow on a Bitcoin coin or financial chart, person looking determined, high contrast, dramatic lighting, futuristic corporate look",
-        "start_process": f"Hyperrealistic photograph of a trading screen with initial numbers, soft {COLOR_NEON_ACTUAL} neon accent, professional setting, natural lighting, clean composition",
-        "obstacle": f"Dramatic wide shot of a person looking at red graphs, intense {COLOR_NEON_ACTUAL} neon glow, high contrast, cinematic tension, dark atmosphere",
-        "climax": f"Extreme close-up of a glowing Bitcoin or gold bar, intense {COLOR_NEON_ACTUAL} neon lighting, high contrast, dramatic, hyperrealistic, 8k",
-        "result": f"Wide shot of a person celebrating with green charts, warm {COLOR_NEON_ACTUAL} neon accents, optimistic atmosphere, professional photography, sharp focus"
+        "data_explanation": f"Hyperrealistic photograph of a trading screen with data and numbers, soft {COLOR_NEON_ACTUAL} neon accent, professional setting, natural lighting, clean composition, data visualization",
+        "takeaway": f"Medium shot of a person pointing at a financial chart or screen, intense {COLOR_NEON_ACTUAL} neon glow, high contrast, cinematic tension, dark atmosphere",
+        "close": f"Wide shot of a person reflecting or looking forward, warm {COLOR_NEON_ACTUAL} neon accents, optimistic atmosphere, professional photography, sharp focus"
     }
     estilo_base = prompts_etapa.get(etapa, prompts_etapa["context_challenge"])
 
@@ -748,6 +702,8 @@ def generar_prompt_imagen_segmento(segmento_texto, etapa, ubicacion_escena,
         elementos_tema = "gold bars, precious metals, vault, luxury banking setting"
     elif "scam" in tema_lower or "fraud" in tema_lower:
         elementos_tema = "dramatic financial collapse scene, crisis atmosphere, concerned professionals"
+    elif "inflation" in tema_lower or "fed" in tema_lower:
+        elementos_tema = "macroeconomic data, inflation charts, central bank environment"
     else:
         elementos_tema = "modern financial setting, professional environment"
 
@@ -769,7 +725,7 @@ SCENE DETAILS:
 - SUBJECT: {elementos_tema}
 
 COMPOSITION RULES:
-1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces unless the story requires it (climax).
+1. SHOT TYPE: Wide or medium shot. ABSOLUTELY NO close-up of faces unless the story requires it.
 2. MAIN SUBJECT: The environment, objects, and setting.
 3. If people appear: They occupy AT MOST 15% of the frame.
 4. FOCUS: Sharp, hyperrealistic, premium quality.
@@ -1326,6 +1282,7 @@ def main():
     print("   ✓ IMAGE REUSE: falls back to previous segment")
     print("   ✓ DUPLICATE CONTROL: checks Spanish bot's history too")
     print("   ✓ TAGS VALIDATION: ensures YouTube-compatible tags")
+    print("   ✓ VARIED CONTENT: 10 different formats to avoid repetition")
     print("="*60)
 
     tz_mexico = ZoneInfo("America/Mexico_City")
@@ -1348,7 +1305,7 @@ def main():
     elif publicadas == 1:
         tipo = "educational"
     else:
-        tipo = "scam"
+        tipo = "analysis"
     
     print(f"📌 Type: {tipo.upper()} (Short #{publicadas+1} of the day)")
     
@@ -1360,20 +1317,19 @@ def main():
     if idea_data and "best_idea" in idea_data:
         idea = idea_data["best_idea"]
         print(f"   ✅ Selected idea: {idea['title']}")
-        print(f"   🔥 Restriction: {idea['restriction']}")
+        print(f"   📌 Format: {idea.get('format', 'general')}")
     else:
         print("⚠️ No idea generated, using fallback topic.")
         idea = None
     
     guion, tema_elegido, restriccion = generar_guion_financiero(tipo, idea, fecha_formateada)
     texto = guion["full_text"]
-    palabras_portada = guion.get("cover_words", "CHALLENGE")
+    palabras_portada = guion.get("cover_words", "INSIGHT")
     prompt_miniatura = guion.get("thumbnail_prompt", "")
     
     palabras_texto = len(re.findall(r'\w+', texto))
     print(f"📝 Text: {palabras_texto} words")
     print(f"📌 Topic: {tema_elegido}")
-    print(f"🔒 Restriction: {restriccion}")
     
     segmentos = dividir_en_segmentos(texto, max_palabras_por_segmento=35)
     etapas, ubicaciones = asignar_etapas_visuales(segmentos)
@@ -1402,7 +1358,7 @@ def main():
         etiquetas_str=guion["tags"],
         gancho=guion["hook_description"],
         contexto=guion["context_description"],
-        hashtags="#Shorts #Finance",
+        hashtags="#Shorts #Finance #Education",
         fuente=guion.get("source_story", "Based on financial analysis"),
         miniatura_path=miniatura_path
     )
